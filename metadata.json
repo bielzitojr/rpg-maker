@@ -1,0 +1,5 @@
+{
+  "name": "RPG Maker",
+  "description": "Uma aplicação interativa de criação de histórias que simula uma interface de RPG Maker. Os usuários podem digitar comandos ou sugestões de história, e uma IA irá gerar a próxima parte da narrativa, criando uma experiência de role-playing dinâmica e responsiva.",
+  "requestFramePermissions": []
+}

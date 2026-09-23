@@ -1,0 +1,41 @@
+{
+  "Humano": [
+    "res://assets/portraits/human.png"
+  ],
+  "Elfo": [
+    "res://assets/portraits/elf.png"
+  ],
+  "Anão": [
+    "res://assets/portraits/dwarf.png"
+  ],
+  "Orc": [
+    "res://assets/creatures/orc.png"
+  ],
+  "Halfling": [
+    "res://assets/portraits/halfling.png"
+  ],
+  "Tiefling": [
+    "res://assets/portraits/tiefling.png"
+  ],
+  "Meio-Elfo": [
+    "res://assets/portraits/halfelf.png"
+  ],
+  "Goblin": [
+    "res://assets/creatures/goblin.png"
+  ],
+  "Slime": [
+    "res://assets/creatures/slime.png"
+  ],
+  "Lobisomem": [
+    "res://assets/portraits/werewolf.png"
+  ],
+  "Vampiro": [
+    "res://assets/portraits/vampire.png"
+  ],
+  "Dragão (Jovem)": [
+    "res://assets/portraits/young_dragon.png"
+  ],
+  "Aracne": [
+    "res://assets/portraits/arachne.png"
+  ]
+}

@@ -1,0 +1,8 @@
+INSTRUÇÕES:
+
+1. Adicione os sons para a rolagem de dados nesta pasta.
+
+Exemplos:
+- roll.mp3
+- critical_success.mp3
+- critical_failure.mp3

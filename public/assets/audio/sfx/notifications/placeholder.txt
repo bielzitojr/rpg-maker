@@ -1,0 +1,6 @@
+INSTRUÇÕES:
+
+1. Adicione os sons para as notificações da interface do usuário (HUD) nesta pasta.
+
+Exemplo:
+- notification.mp3

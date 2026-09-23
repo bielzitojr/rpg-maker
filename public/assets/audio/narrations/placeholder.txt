@@ -1,0 +1,5 @@
+INSTRUÇÕES:
+
+Esta pasta é para clipes de áudio de narração pré-gravados.
+
+Você pode usar estes arquivos para substituir o Text-to-Speech (TTS) em momentos-chave da história, como introduções ou cenas dramáticas, para um maior impacto.

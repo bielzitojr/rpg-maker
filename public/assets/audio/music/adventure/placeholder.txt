@@ -1,0 +1,9 @@
+INSTRUÇÕES:
+
+1. Adicione as músicas de fundo para cada gênero de aventura nesta pasta.
+2. O nome do arquivo DEVE ser o nome do gênero com espaços substituídos por underscores (_), e a extensão .mp3.
+
+Exemplos:
+- Para o gênero "Fantasia", o arquivo deve se chamar "Fantasia.mp3".
+- Para o gênero "Exploração Espacial", o arquivo deve se chamar "Exploração_Espacial.mp3".
+- Para o gênero "Terror", o arquivo deve se chamar "Terror.mp3".

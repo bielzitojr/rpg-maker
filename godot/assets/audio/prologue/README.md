@@ -1,0 +1,1 @@
+Efeitos sintetizados localmente para o prólogo: queda/impacto, buzina, respiração estilizada, vazio, luz, portal, floresta e folhas. WAV mono, 44,1 kHz, 16 bits, com fades e margem de volume. Sem gravações ou bibliotecas externas. Cada faixa inicia um efeito; avançar interrompe o anterior. Volume herdado das configurações do jogo.

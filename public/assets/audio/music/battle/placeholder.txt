@@ -1,0 +1,9 @@
+INSTRUÇÕES:
+
+1. Adicione as músicas de batalha para cada classe de personagem nesta pasta.
+2. O nome do arquivo DEVE ser o nome da classe com a extensão .mp3.
+
+Exemplos:
+- Para a classe "Guerreiro", o arquivo deve se chamar "Guerreiro.mp3".
+- Para a classe "Mago", o arquivo deve se chamar "Mago.mp3".
+- Para a classe "Ladino", o arquivo deve se chamar "Ladino.mp3".

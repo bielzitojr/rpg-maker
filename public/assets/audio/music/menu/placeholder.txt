@@ -1,0 +1,4 @@
+INSTRUÇÕES:
+
+1. Adicione sua música para o menu principal nesta pasta (ex: menu.mp3).
+2. Se o nome do arquivo for diferente de "menu.mp3", atualize o nome no arquivo 'services/audioService.ts' na função 'playMenuMusic'.

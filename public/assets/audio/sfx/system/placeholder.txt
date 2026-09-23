@@ -1,0 +1,8 @@
+INSTRUÇÕES:
+
+1. Adicione os sons para eventos de sistema nesta pasta.
+
+Exemplos:
+- open_modal.mp3
+- save_game.mp3
+- achievement_unlocked.mp3

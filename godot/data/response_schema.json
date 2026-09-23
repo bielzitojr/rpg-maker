@@ -1,0 +1,425 @@
+{
+  "type": "OBJECT",
+  "properties": {
+    "storyText": {
+      "type": "STRING",
+      "description": "A continuação da história."
+    },
+    "location": {
+      "type": "STRING",
+      "description": "A localização atual do personagem. Inclua sempre."
+    },
+    "gameTime": {
+      "type": "OBJECT",
+      "description": "Atualizações no tempo do jogo.",
+      "properties": {
+        "hour": {
+          "type": "INTEGER"
+        },
+        "minute": {
+          "type": "INTEGER"
+        },
+        "day": {
+          "type": "INTEGER"
+        },
+        "month": {
+          "type": "INTEGER"
+        },
+        "year": {
+          "type": "INTEGER"
+        }
+      }
+    },
+    "playerStatus": {
+      "type": "OBJECT",
+      "description": "Atualizações no status do jogador. Apenas inclua se houver alterações.",
+      "properties": {
+        "health": {
+          "type": "INTEGER"
+        },
+        "maxHealth": {
+          "type": "INTEGER"
+        },
+        "mana": {
+          "type": "INTEGER"
+        },
+        "maxMana": {
+          "type": "INTEGER"
+        },
+        "energy": {
+          "type": "INTEGER"
+        },
+        "maxEnergy": {
+          "type": "INTEGER"
+        },
+        "sanity": {
+          "type": "INTEGER",
+          "description": "(Gênero Terror) A sanidade atual do jogador."
+        },
+        "description": {
+          "type": "STRING"
+        },
+        "title": {
+          "type": "STRING"
+        },
+        "fame": {
+          "type": "STRING"
+        },
+        "level": {
+          "type": "INTEGER"
+        },
+        "experience": {
+          "type": "INTEGER"
+        },
+        "maxExperience": {
+          "type": "INTEGER"
+        },
+        "skillPoints": {
+          "type": "INTEGER",
+          "description": "(Gênero Isekai) Pontos de habilidade para distribuir."
+        },
+        "gold": {
+          "type": "INTEGER",
+          "description": "(Gênero Arena) A quantidade de ouro do jogador."
+        }
+      }
+    },
+    "inventory": {
+      "type": "ARRAY",
+      "description": "Lista de NOVOS itens REALMENTE adquiridos na narrativa deste turno (encontrados em baús, pegos de inimigos, recebidos de NPCs). NÃO adicione itens que o jogador apenas 'imaginou' ter ou que não foram explicitamente dados a ele.",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "name": {
+            "type": "STRING"
+          },
+          "description": {
+            "type": "STRING"
+          },
+          "type": {
+            "type": "STRING",
+            "enum": [
+              "Arma",
+              "Armadura",
+              "Consumível",
+              "Missão",
+              "Chave",
+              "Outro"
+            ]
+          },
+          "quantity": {
+            "type": "INTEGER"
+          },
+          "damage": {
+            "type": "STRING",
+            "description": "O dano da arma, se o item for do tipo 'Arma'."
+          },
+          "starSlots": {
+            "type": "INTEGER",
+            "description": "Quantidade máxima de estrelas do item (1 a 10); padrão 5."
+          },
+          "stars": {
+            "type": "INTEGER",
+            "description": "Estrelas atuais (0 até starSlots)."
+          }
+        }
+      }
+    },
+    "skills": {
+      "type": "ARRAY",
+      "description": "Lista de NOVAS habilidades ou magias aprendidas. Para o gênero Isekai, use as categorias apropriadas. Sempre inclua 'level' e 'maxLevel'.",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "name": {
+            "type": "STRING"
+          },
+          "description": {
+            "type": "STRING"
+          },
+          "category": {
+            "type": "STRING",
+            "enum": [
+              "Habilidades Passivas de Raça",
+              "Habilidades Físicas de Classe",
+              "Habilidades Passivas Físicas de Classe",
+              "Habilidades Mágicas de Classe",
+              "Habilidades Passivas Mágicas de Classe",
+              "Habilidades Físicas Aprendidas",
+              "Habilidades Mágicas Aprendidas",
+              "Magia"
+            ]
+          },
+          "damage": {
+            "type": "STRING",
+            "description": "O dano da habilidade, se aplicável."
+          },
+          "cost": {
+            "type": "INTEGER",
+            "description": "O custo de recurso da habilidade, se aplicável."
+          },
+          "costType": {
+            "type": "STRING",
+            "enum": [
+              "Mana",
+              "Energia"
+            ],
+            "description": "O tipo de recurso consumido."
+          },
+          "level": {
+            "type": "INTEGER",
+            "description": "O nível inicial da habilidade (geralmente 1)."
+          },
+          "maxLevel": {
+            "type": "INTEGER",
+            "description": "O nível máximo que a habilidade pode atingir."
+          }
+        }
+      }
+    },
+    "bestiary": {
+      "type": "ARRAY",
+      "description": "Lista de criaturas para ADICIONAR ou ATUALIZAR no bestiário. Retorne a ficha completa com todas as informações conhecidas até agora.",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "name": {
+            "type": "STRING"
+          },
+          "description": {
+            "type": "STRING",
+            "description": "A descrição base da criatura."
+          },
+          "knownInfo": {
+            "type": "OBJECT",
+            "properties": {
+              "health": {
+                "type": "STRING",
+                "description": "Descrição da vitalidade (ex: 'Baixa', 'Média', 'Alta')."
+              },
+              "mana": {
+                "type": "STRING",
+                "description": "Descrição da energia mágica (ex: 'Nenhuma', 'Reserva arcana profunda')."
+              },
+              "weaknesses": {
+                "type": "ARRAY",
+                "items": {
+                  "type": "STRING"
+                }
+              },
+              "abilities": {
+                "type": "ARRAY",
+                "items": {
+                  "type": "STRING"
+                }
+              },
+              "loot": {
+                "type": "ARRAY",
+                "items": {
+                  "type": "STRING"
+                },
+                "description": "Itens que podem ser obtidos da criatura."
+              },
+              "habitat": {
+                "type": "STRING"
+              },
+              "lore": {
+                "type": "STRING",
+                "description": "História ou fatos interessantes sobre a criatura."
+              }
+            }
+          }
+        }
+      }
+    },
+    "allies": {
+      "type": "ARRAY",
+      "description": "Lista de NOVOS aliados que se juntaram ao jogador.",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "name": {
+            "type": "STRING"
+          },
+          "description": {
+            "type": "STRING"
+          }
+        }
+      }
+    },
+    "enemies": {
+      "type": "ARRAY",
+      "description": "A lista COMPLETA de inimigos atualmente em combate. **MUITO IMPORTANTE:** Você DEVE usar os mesmos 'id's fornecidos no prompt em 'Inimigos em Cena'. Retorne a lista completa de inimigos, atualizando o campo 'health' daqueles que sofreram dano. Se um inimigo morrer, remova-o da lista. NÃO gere novos IDs para inimigos existentes.",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "id": {
+            "type": "STRING",
+            "description": "O identificador único para este inimigo específico na luta."
+          },
+          "name": {
+            "type": "STRING"
+          },
+          "description": {
+            "type": "STRING"
+          },
+          "health": {
+            "type": "INTEGER"
+          },
+          "maxHealth": {
+            "type": "INTEGER"
+          }
+        }
+      }
+    },
+    "unlockedAchievementId": {
+      "type": "STRING",
+      "description": "O ID de uma conquista desbloqueada NESTE turno."
+    },
+    "diceRollChallenge": {
+      "type": "BOOLEAN",
+      "description": "Defina como true se o jogador precisar fazer um teste de dados (rolar um d20) para a próxima ação."
+    },
+    "actionSuggestions": {
+      "type": "ARRAY",
+      "description": "Uma lista de 3 a 5 ações sugeridas que o jogador pode tomar a seguir. As sugestões devem ser curtas, diretas e variadas. Não forneça sugestões se 'diceRollChallenge' for true.",
+      "items": {
+        "type": "STRING"
+      },
+      "maxItems": 5
+    },
+    "shipStatus": {
+      "type": "OBJECT",
+      "description": "(Gênero Exploração Espacial) O status completo da nave do jogador.",
+      "properties": {
+        "name": {
+          "type": "STRING"
+        },
+        "hullIntegrity": {
+          "type": "INTEGER"
+        },
+        "shieldLevel": {
+          "type": "INTEGER"
+        },
+        "engineStatus": {
+          "type": "STRING"
+        },
+        "scannerStatus": {
+          "type": "STRING"
+        },
+        "lifeSupportStatus": {
+          "type": "STRING"
+        },
+        "fuel": {
+          "type": "INTEGER"
+        },
+        "scrap": {
+          "type": "INTEGER"
+        }
+      }
+    },
+    "factionReputation": {
+      "type": "ARRAY",
+      "description": "(Gênero Fantasia) A lista completa de reputação com as facções.",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "name": {
+            "type": "STRING"
+          },
+          "reputation": {
+            "type": "INTEGER"
+          },
+          "status": {
+            "type": "STRING"
+          }
+        }
+      }
+    },
+    "squadStatus": {
+      "type": "OBJECT",
+      "description": "(Gênero Guerra) O status completo do esquadrão do jogador.",
+      "properties": {
+        "name": {
+          "type": "STRING"
+        },
+        "morale": {
+          "type": "INTEGER"
+        },
+        "members": {
+          "type": "ARRAY",
+          "items": {
+            "type": "OBJECT",
+            "properties": {
+              "name": {
+                "type": "STRING"
+              },
+              "status": {
+                "type": "STRING"
+              }
+            }
+          }
+        }
+      }
+    },
+    "evidenceBoard": {
+      "type": "ARRAY",
+      "description": "(Gênero Investigação) Lista de NOVAS evidências encontradas.",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "id": {
+            "type": "STRING"
+          },
+          "description": {
+            "type": "STRING"
+          }
+        }
+      }
+    },
+    "npcDialogue": {
+      "type": "OBJECT",
+      "description": "(Gênero Bíblico) Uma fala do NPC 'O Inimigo' para o jogador.",
+      "properties": {
+        "character": {
+          "type": "STRING",
+          "description": "Sempre 'O Inimigo'"
+        },
+        "line": {
+          "type": "STRING"
+        }
+      }
+    },
+    "diceTest": {
+      "type": "OBJECT",
+      "properties": {
+        "attribute": {
+          "type": "STRING",
+          "enum": [
+            "strength",
+            "dexterity",
+            "constitution",
+            "intelligence",
+            "wisdom",
+            "charisma"
+          ]
+        },
+        "difficulty": {
+          "type": "INTEGER"
+        },
+        "reason": {
+          "type": "STRING"
+        }
+      },
+      "required": [
+        "attribute",
+        "difficulty",
+        "reason"
+      ]
+    }
+  },
+  "required": [
+    "storyText",
+    "location"
+  ]
+}

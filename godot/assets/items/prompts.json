@@ -1,0 +1,257 @@
+[
+  {
+    "id": "item_00",
+    "name": "Espada Longa",
+    "prompt": "Create a single square inventory item illustration of Espada Longa, for a fantasy RPG. ONLY the named object isolated centered on dark charcoal background, whole object visible with ample padding. Rich hand-painted fantasy game icon, readable silhouette and metallic or organic material detail, neutral silver rim light. No person, no creature, no arms holding it, no scenery, no clothing except if the item itself is armor. No text, no letters, no frame. This is an OBJECT icon, not a character portrait. For natural weapons, depict a detached stylized claw-and-fang emblem."
+  },
+  {
+    "id": "item_01",
+    "name": "Machado de Batalha",
+    "prompt": "Create a single square inventory item illustration of Machado de Batalha, for a fantasy RPG. ONLY the named object isolated centered on dark charcoal background, whole object visible with ample padding. Rich hand-painted fantasy game icon, readable silhouette and metallic or organic material detail, neutral silver rim light. No person, no creature, no arms holding it, no scenery, no clothing except if the item itself is armor. No text, no letters, no frame. This is an OBJECT icon, not a character portrait. For natural weapons, depict a detached stylized claw-and-fang emblem."
+  },
+  {
+    "id": "item_02",
+    "name": "Martelo de Guerra",
+    "prompt": "Create a single square inventory item illustration of Martelo de Guerra, for a fantasy RPG. ONLY the named object isolated centered on dark charcoal background, whole object visible with ample padding. Rich hand-painted fantasy game icon, readable silhouette and metallic or organic material detail, neutral silver rim light. No person, no creature, no arms holding it, no scenery, no clothing except if the item itself is armor. No text, no letters, no frame. This is an OBJECT icon, not a character portrait. For natural weapons, depict a detached stylized claw-and-fang emblem."
+  },
+  {
+    "id": "item_03",
+    "name": "Espadão",
+    "prompt": "Create a single square inventory item illustration of Espadão, for a fantasy RPG. ONLY the named object isolated centered on dark charcoal background, whole object visible with ample padding. Rich hand-painted fantasy game icon, readable silhouette and metallic or organic material detail, neutral silver rim light. No person, no creature, no arms holding it, no scenery, no clothing except if the item itself is armor. No text, no letters, no frame. This is an OBJECT icon, not a character portrait. For natural weapons, depict a detached stylized claw-and-fang emblem."
+  },
+  {
+    "id": "item_04",
+    "name": "Cajado",
+    "prompt": "Create a single square inventory item illustration of Cajado, for a fantasy RPG. ONLY the named object isolated centered on dark charcoal background, whole object visible with ample padding. Rich hand-painted fantasy game icon, readable silhouette and metallic or organic material detail, neutral silver rim light. No person, no creature, no arms holding it, no scenery, no clothing except if the item itself is armor. No text, no letters, no frame. This is an OBJECT icon, not a character portrait. For natural weapons, depict a detached stylized claw-and-fang emblem."
+  },
+  {
+    "id": "item_05",
+    "name": "Varinha",
+    "prompt": "Create a single square inventory item illustration of Varinha, for a fantasy RPG. ONLY the named object isolated centered on dark charcoal background, whole object visible with ample padding. Rich hand-painted fantasy game icon, readable silhouette and metallic or organic material detail, neutral silver rim light. No person, no creature, no arms holding it, no scenery, no clothing except if the item itself is armor. No text, no letters, no frame. This is an OBJECT icon, not a character portrait. For natural weapons, depict a detached stylized claw-and-fang emblem."
+  },
+  {
+    "id": "item_06",
+    "name": "Adaga Rúnica",
+    "prompt": "Create a single square inventory item illustration of Adaga Rúnica, for a fantasy RPG. ONLY the named object isolated centered on dark charcoal background, whole object visible with ample padding. Rich hand-painted fantasy game icon, readable silhouette and metallic or organic material detail, neutral silver rim light. No person, no creature, no arms holding it, no scenery, no clothing except if the item itself is armor. No text, no letters, no frame. This is an OBJECT icon, not a character portrait. For natural weapons, depict a detached stylized claw-and-fang emblem."
+  },
+  {
+    "id": "item_07",
+    "name": "Orbe Arcano",
+    "prompt": "A single square fantasy RPG inventory icon of Orbe Arcano. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_08",
+    "name": "Adagas Duplas",
+    "prompt": "A single square fantasy RPG inventory icon of Adagas Duplas. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_09",
+    "name": "Arco Curto",
+    "prompt": "A single square fantasy RPG inventory icon of Arco Curto. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_10",
+    "name": "Rapieira",
+    "prompt": "A single square fantasy RPG inventory icon of Rapieira. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_11",
+    "name": "Besta de Mão",
+    "prompt": "Square fantasy inventory illustration: a small one-handed CROSSBOW, wooden pistol-shaped stock, a horizontal steel bow mounted perpendicular to the stock, taut bowstring and one bolt on its rail. Clearly a medieval mechanical projectile weapon. Centered isolated on charcoal background, entire object visible, silver rim light, detailed fantasy game item art. No animal, no claws, no hands, no person, no text."
+  },
+  {
+    "id": "item_12",
+    "name": "Maça",
+    "prompt": "A single square fantasy RPG inventory icon of Maça. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_13",
+    "name": "Martelo Leve",
+    "prompt": "A single square fantasy RPG inventory icon of Martelo Leve. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_14",
+    "name": "Símbolo Sagrado",
+    "prompt": "A single square fantasy RPG inventory icon of Símbolo Sagrado. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_15",
+    "name": "Escudo",
+    "prompt": "A single square fantasy RPG inventory icon of Escudo. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_16",
+    "name": "Machado Grande",
+    "prompt": "A single square fantasy RPG inventory icon of Machado Grande. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_17",
+    "name": "Marreta",
+    "prompt": "A single square fantasy RPG inventory icon of Marreta. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_18",
+    "name": "Clava Pesada",
+    "prompt": "A single square fantasy RPG inventory icon of Clava Pesada. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_19",
+    "name": "Lança",
+    "prompt": "A single square fantasy RPG inventory icon of Lança. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_20",
+    "name": "Arco Longo",
+    "prompt": "A single square fantasy RPG inventory icon of Arco Longo. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_21",
+    "name": "Cimitarra",
+    "prompt": "A single square fantasy RPG inventory icon of Cimitarra. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_22",
+    "name": "Espadas Curtas",
+    "prompt": "A single square fantasy RPG inventory icon of Espadas Curtas. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_23",
+    "name": "Chicote",
+    "prompt": "A single square fantasy RPG inventory icon of Chicote. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_24",
+    "name": "Alaúde",
+    "prompt": "A single square fantasy RPG inventory icon of Alaúde. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_25",
+    "name": "Flauta Encantada",
+    "prompt": "A single square fantasy RPG inventory icon of Flauta Encantada. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_26",
+    "name": "Adaga",
+    "prompt": "A single square fantasy RPG inventory icon of Adaga. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_27",
+    "name": "Armas Naturais (Garras, Dentes, etc.)",
+    "prompt": "A single square fantasy RPG inventory icon of Armas Naturais (Garras, Dentes, etc.). Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_28",
+    "name": "Poção de Vida",
+    "prompt": "A single square fantasy RPG inventory icon of Poção de Vida. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_29",
+    "name": "Poção de Mana",
+    "prompt": "A single square fantasy RPG inventory icon of Poção de Mana. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_30",
+    "name": "Tônico de Energia",
+    "prompt": "A single square fantasy RPG inventory icon of Tônico de Energia. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_31",
+    "name": "Antídoto",
+    "prompt": "A single square fantasy RPG inventory icon of Antídoto. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_32",
+    "name": "Ração de Viagem",
+    "prompt": "A single square fantasy RPG inventory icon of Ração de Viagem. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_33",
+    "name": "Erva Medicinal",
+    "prompt": "A single square fantasy RPG inventory icon of Erva Medicinal. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_34",
+    "name": "Minério de Ferro",
+    "prompt": "A single square fantasy RPG inventory icon of Minério de Ferro. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_35",
+    "name": "Lingote de Ferro",
+    "prompt": "A single square fantasy RPG inventory icon of Lingote de Ferro. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_36",
+    "name": "Madeira Resistente",
+    "prompt": "A single square fantasy RPG inventory icon of Madeira Resistente. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_37",
+    "name": "Couro Curtido",
+    "prompt": "A single square fantasy RPG inventory icon of Couro Curtido. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_38",
+    "name": "Cristal de Mana",
+    "prompt": "A single square fantasy RPG inventory icon of Cristal de Mana. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_39",
+    "name": "Seda de Aranha",
+    "prompt": "A single square fantasy RPG inventory icon of Seda de Aranha. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_40",
+    "name": "Escama de Dragão",
+    "prompt": "A single square fantasy RPG inventory icon of Escama de Dragão. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_41",
+    "name": "Armadura de Couro",
+    "prompt": "A single square fantasy RPG inventory icon of Armadura de Couro. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_42",
+    "name": "Cota de Malha",
+    "prompt": "A single square fantasy RPG inventory icon of Cota de Malha. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_43",
+    "name": "Escudo de Madeira",
+    "prompt": "A single square fantasy RPG inventory icon of Escudo de Madeira. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_44",
+    "name": "Anel de Foco",
+    "prompt": "A single square fantasy RPG inventory icon of Anel de Foco. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_45",
+    "name": "Amuleto de Vigor",
+    "prompt": "A single square fantasy RPG inventory icon of Amuleto de Vigor. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_46",
+    "name": "Tocha",
+    "prompt": "A single square fantasy RPG inventory icon of Tocha. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_47",
+    "name": "Corda",
+    "prompt": "A single square fantasy RPG inventory icon of Corda. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_48",
+    "name": "Kit de Alquimia",
+    "prompt": "A single square fantasy RPG inventory icon of Kit de Alquimia. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "item_49",
+    "name": "Chave Antiga",
+    "prompt": "A single square fantasy RPG inventory icon of Chave Antiga. Only the named object, fully visible, centered isolated on charcoal background, generous margin, detailed painterly fantasy item art, neutral silver rim lighting. No human, no character, no hands, no scenery, no text, no frame. Health potion red, mana potion blue, energy tonic yellow, antidote green. If natural weapons depict a claw and fang emblem."
+  },
+  {
+    "id": "slime",
+    "prompt": "Correct this slime illustration: replace the humanoid creature entirely with a small low rounded amorphous turquoise gelatinous blob resting directly on mossy ground. It is a simple dome of translucent jelly, wider than tall, two tiny dark eyes and suspended bubbles. Absolutely NO humanoid anatomy, NO arms, NO legs, NO torso, NO head separate from body, NO clothing, NO armor, NO equipment, NO staff, NO accessories. Keep rich painterly fantasy lighting and forest ruins background. The blob occupies center foreground.",
+    "path": "res://assets/creatures/slime.png"
+  }
+]

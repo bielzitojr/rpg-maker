@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RPG Maker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Libre+Baskerville&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        --bg-color: #3a2d21;
+        --text-color: #fdf6e3;
+        --primary-accent-color: #f59e0b; /* amber-500 */
+        --secondary-accent-color: #d97706; /* amber-600 */
+        --tertiary-accent-color: #b45309; /* amber-700 */
+        --quaternary-accent-color: #92400e; /* amber-800 */
+        --surface-color: #fdf6e3;
+        --surface-text-color: #3a2d21;
+        --border-color: #57534e; /* stone-600 */
+        --button-text-color: #3a2d21;
+        --player-text-color: var(--secondary-accent-color);
+        --shadow-color: rgba(0,0,0,0.7);
+        transition: background-color 0.5s, color 0.5s;
+      }
+      .theme-claro {
+        --bg-color: #f5f5f4; /* stone-100 */
+        --text-color: #292524; /* stone-800 */
+        --primary-accent-color: #059669; /* emerald-600 */
+        --secondary-accent-color: #047857; /* emerald-700 */
+        --tertiary-accent-color: #065f46; /* emerald-800 */
+        --quaternary-accent-color: #064e3b; /* emerald-900 */
+        --surface-color: #ffffff;
+        --surface-text-color: #1c1917; /* stone-900 */
+        --border-color: #a8a29e; /* stone-400 */
+        --button-text-color: #1c1917; /* stone-900 */
+        --player-text-color: var(--secondary-accent-color);
+        --shadow-color: rgba(0,0,0,0.2);
+      }
+      .theme-escuro {
+        --bg-color: #1c1917; /* stone-900 */
+        --text-color: #e7e5e4; /* stone-200 */
+        --primary-accent-color: #60a5fa; /* blue-400 */
+        --secondary-accent-color: #3b82f6; /* blue-500 */
+        --tertiary-accent-color: #2563eb; /* blue-600 */
+        --quaternary-accent-color: #1d4ed8; /* blue-700 */
+        --surface-color: #292524; /* stone-800 */
+        --surface-text-color: #e7e5e4; /* stone-200 */
+        --border-color: #57534e; /* stone-600 */
+        --button-text-color: #ffffff;
+        --player-text-color: var(--primary-accent-color);
+        --shadow-color: rgba(0,0,0,0.9);
+      }
+      .font-title {
+        font-family: 'IM Fell English SC', serif;
+      }
+      .font-body {
+        font-family: 'Libre Baskerville', serif;
+      }
+       @keyframes fire-flicker {
+            0%, 100% {
+                text-shadow: 0 0 4px #fff, 0 0 8px #ef4444, 0 0 12px #dc2626, 0 0 16px #a855f7;
+                color: #fca5a5;
+            }
+            50% {
+                text-shadow: 0 0 6px #fff, 0 0 12px #ef4444, 0 0 18px #dc2626, 0 0 24px #a855f7;
+                color: #f87171;
+            }
+        }
+        .critical-failure-text {
+            animation: fire-flicker 1.5s infinite alternate;
+        }
+
+        @keyframes star-sparkle {
+            0%, 100% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.4); opacity: 1; }
+        }
+        .star {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: #fcd34d;
+            border-radius: 50%;
+            box-shadow: 0 0 5px #fcd34d, 0 0 10px #fbbf24;
+            animation: star-sparkle 2s ease-in-out infinite;
+            animation-delay: var(--delay);
+        }
+        .critical-success-text {
+            color: #fde047; /* yellow-300 */
+            text-shadow: 0 0 2px #fff, 0 0 8px #facc15, 0 0 16px #f59e0b;
+        }
+        @keyframes turn-glow {
+            0%, 100% {
+                box-shadow: 0 0 8px 2px var(--primary-accent-color);
+                transform: scale(1.1);
+            }
+            50% {
+                box-shadow: 0 0 16px 4px var(--primary-accent-color);
+                transform: scale(1.15);
+            }
+        }
+        .current-turn-animation {
+            animation: turn-glow 1.5s infinite ease-in-out;
+        }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.24.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-[#3a2d21] font-body">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

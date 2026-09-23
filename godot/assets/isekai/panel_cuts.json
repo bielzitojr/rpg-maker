@@ -1,0 +1,114 @@
+{
+  "arrival": {
+    "cuts": [
+      0.342728297632469,
+      0.6674182638105975
+    ],
+    "vertical": false
+  },
+  "cosmos": {
+    "cuts": [
+      0.302734375,
+      0.59375
+    ],
+    "vertical": false
+  },
+  "forest": {
+    "cuts": [
+      0.20969560315670802,
+      0.6065388951521984
+    ],
+    "vertical": false
+  },
+  "race_arachne": {
+    "cuts": [
+      0.29296875,
+      0.5732421875
+    ],
+    "vertical": false
+  },
+  "race_dragon": {
+    "cuts": [
+      0.3037109375,
+      0.58203125
+    ],
+    "vertical": false
+  },
+  "race_dwarf": {
+    "cuts": [
+      0.3154296875,
+      0.6220703125
+    ],
+    "vertical": false
+  },
+  "race_elf": {
+    "cuts": [
+      0.3037109375,
+      0.5859375
+    ],
+    "vertical": false
+  },
+  "race_goblin": {
+    "cuts": [
+      0.33089064261555806,
+      0.6685456595264938
+    ],
+    "vertical": true
+  },
+  "race_halfelf": {
+    "cuts": [
+      0.3974609375,
+      0.65625
+    ],
+    "vertical": false
+  },
+  "race_halfling": {
+    "cuts": [
+      0.279296875,
+      0.5869140625
+    ],
+    "vertical": false
+  },
+  "race_human": {
+    "cuts": [
+      0.2900390625,
+      0.62109375
+    ],
+    "vertical": false
+  },
+  "race_orc": {
+    "cuts": [
+      0.30078125,
+      0.6171875
+    ],
+    "vertical": false
+  },
+  "race_slime": {
+    "cuts": [
+      0.30859375,
+      0.623046875
+    ],
+    "vertical": false
+  },
+  "race_tiefling": {
+    "cuts": [
+      0.3232421875,
+      0.6142578125
+    ],
+    "vertical": false
+  },
+  "race_vampire": {
+    "cuts": [
+      0.2919921875,
+      0.5810546875
+    ],
+    "vertical": false
+  },
+  "race_werewolf": {
+    "cuts": [
+      0.283203125,
+      0.6015625
+    ],
+    "vertical": false
+  }
+}
