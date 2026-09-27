@@ -9,7 +9,7 @@ const ORANGE = Color("f59e0b")
 var state := State.new()
 var storage := Store.new()
 var client: Node
-var prefs := {"textSpeed": "Normal", "textDescription": "Curto e Detalhado", "autoNarrate": false, "theme": "Padrão", "volume": 0.35, "showActionSuggestions": true, "autoSave": true, "illustratedIcons": true, "hudIconSetVersion": 2, "model": "gemini-3-flash-preview", "imageModel": "gemini-2.5-flash-image"}
+var prefs := {"textSpeed": "Normal", "textDescription": "Curto e Detalhado", "autoNarrate": false, "theme": "Padrão", "volume": 0.35, "showActionSuggestions": true, "autoSave": true, "illustratedIcons": true, "hudIconSetVersion": 2, "tutorialVersion": 0, "requestTimeout": 75.0, "provider": "Gemini", "groqModel": "openai/gpt-oss-20b", "routerModel": "openrouter/free", "model": "gemini-3-flash-preview", "imageModel": "gemini-2.5-flash-image"}
 var screen := "loading"
 var mode := "player"
 var genre := ""
@@ -29,9 +29,9 @@ var location_label: Label
 var clock_label: Label
 var send_button: Button
 var cancel_button: Button
-var suggestion_row: HFlowContainer
-var combat_row: HBoxContainer
-var hud_row: HBoxContainer
+var suggestion_row: VBoxContainer
+var combat_row: VBoxContainer
+var hud_row: GridContainer
 var portrait: TextureRect
 var portrait_hint: Label
 var fields: Dictionary = {}
@@ -56,6 +56,38 @@ var portrait_target := "character"
 var isekai_start_inventory := false
 var isekai_revealed := false
 var isekai_rolled := false
+var game_host: Control
+var game_columns: HBoxContainer
+var chat_column: VBoxContainer
+var navigation_panel: PanelContainer
+var action_panel: PanelContainer
+var action_content: VBoxContainer
+var compact_bar: HBoxContainer
+var drawer_shade: ColorRect
+var drawer := ""
+var suggestion_heading: Label
+var combat_tabs: HBoxContainer
+var battle_panel: VBoxContainer
+var battle_active := false
+var battle_selected := false
+var battle_target := ""
+var battle_target_id := ""
+var repair_count := 0
+var last_prompt := ""
+var last_contents: Array = []
+var control_turn := false
+var failed_control := false
+var combat_action: Dictionary = {}
+var combat_category := "Inimigos"
+var tutorial_layer: CanvasLayer
+var rolling := false
+var enemy_scheduled := false
+var allow_test_automation := false
+var dev_combat := false
+var dev_offline := true
+var dev_snapshot: Dictionary = {}
+var request_generation := 0
+var modal_margin: MarginContainer
 
 func _ready() -> void:
 	test_mode = "--test" in OS.get_cmdline_user_args()
@@ -75,6 +107,10 @@ func _ready() -> void:
 	if unlocked is Array: total_unlocked = unlocked
 	client = Gemini.new()
 	add_child(client)
+	client.provider = prefs.provider
+	client.provider_models.Groq = prefs.groqModel
+	client.provider_models.OpenRouter = prefs.routerModel
+	client.text_timeout = prefs.requestTimeout
 	client.model = prefs.model
 	client.image_model = prefs.imageModel
 	client.completed.connect(_reply)
@@ -94,7 +130,9 @@ func _ready() -> void:
 	view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for edge in ["left", "right", "top", "bottom"]: view.add_theme_constant_override("margin_" + edge, 20)
 	add_child(view)
-	DisplayServer.window_set_min_size(Vector2i(960, 720))
+	DisplayServer.window_set_min_size(Vector2i(360, 480))
+	get_viewport().size_changed.connect(_resize_layout)
+	if not test_mode: get_window().mode = Window.MODE_MAXIMIZED
 	if test_mode: show_screen("mainMenu")
 	else:
 		show_screen("loading")
@@ -206,6 +244,7 @@ func show_screen(next: String) -> void:
 	title.add_theme_constant_override("shadow_offset_x", 3)
 	title.add_theme_constant_override("shadow_offset_y", 4)
 	ui.add_child(title)
+	title.visible = next != "inGame"
 	match next:
 		"loading": _loading()
 		"mainMenu": _main_menu()
@@ -217,7 +256,7 @@ func show_screen(next: String) -> void:
 		"loadGame": _load_screen()
 		"achievements": _achievements_screen()
 		"updateNotes": _updates_screen()
-	var status_row := _hbox(ui, 8)
+	var status_row: BoxContainer = _vbox(action_content, 8) if next == "inGame" else _hbox(ui, 8)
 	message = _label("", 13, GOLD)
 	message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	message.size_flags_horizontal = SIZE_EXPAND_FILL
@@ -229,6 +268,7 @@ func show_screen(next: String) -> void:
 	status_row.add_child(retry_button)
 	if next == "mainMenu": _status(_connection_status())
 	if next == "inGame": _refresh_game()
+	_resize_layout()
 	_update_music()
 
 func _center(width: float) -> VBoxContainer:
@@ -596,7 +636,7 @@ func _start_adventure() -> void:
 	if genre == "Isekai" and not isekai_revealed:
 		_begin_isekai_intro()
 		return
-	if client.api_key.is_empty():
+	if client.text_key().is_empty():
 		_settings_modal()
 		_status("Informe sua chave Gemini para iniciar a aventura.")
 		return
@@ -614,10 +654,50 @@ func _start_adventure() -> void:
 		_request_turn(opening_text, true)
 
 func _game_screen() -> void:
+	drawer = ""
+	compact_bar = _hbox(ui, 8)
+	compact_bar.add_child(_button("Menu", func(): _toggle_drawer("navigation"), "dark"))
+	var brand := _label("RPG Maker", 27, ORANGE, true)
+	brand.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	brand.size_flags_horizontal = SIZE_EXPAND_FILL
+	compact_bar.add_child(brand)
+	compact_bar.add_child(_button("Ações", func(): _toggle_drawer("actions"), "dark"))
+	game_host = Control.new()
+	game_host.size_flags_vertical = SIZE_EXPAND_FILL
+	ui.add_child(game_host)
+	game_columns = HBoxContainer.new()
+	game_host.add_child(game_columns)
+	game_columns.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	game_columns.add_theme_constant_override("separation", 14)
+	navigation_panel = PanelContainer.new()
+	navigation_panel.add_theme_stylebox_override("panel", _box(Color("2c241c"), Color("756129"), 8, 12))
+	game_columns.add_child(navigation_panel)
+	var nav := _vbox(navigation_panel, 12)
+	var logo := _label("RPG Maker", 32, ORANGE, true)
+	logo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	nav.add_child(logo)
+	var nav_scroll := ScrollContainer.new()
+	nav_scroll.size_flags_vertical = SIZE_EXPAND_FILL
+	nav_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	nav.add_child(nav_scroll)
+	hud_row = GridContainer.new()
+	hud_row.columns = 2
+	hud_row.size_flags_horizontal = SIZE_EXPAND_FILL
+	hud_row.add_theme_constant_override("h_separation", 6)
+	hud_row.add_theme_constant_override("v_separation", 6)
+	nav_scroll.add_child(hud_row)
+	var fullscreen := _button("Tela cheia · F11", _toggle_fullscreen, "dark")
+	fullscreen.add_theme_font_size_override("font_size", 16)
+	nav.add_child(fullscreen)
+	chat_column = _vbox(game_columns, 10)
+	chat_column.size_flags_horizontal = SIZE_EXPAND_FILL
 	var paper := PanelContainer.new()
 	paper.size_flags_vertical = SIZE_EXPAND_FILL
-	paper.add_theme_stylebox_override("panel", _box(CREAM, Color("716b5e"), 6, 20))
-	ui.add_child(paper)
+	paper.add_theme_stylebox_override("panel", _box(CREAM, Color("716b5e"), 8, 20))
+	combat_tabs = _hbox(chat_column, 8)
+	combat_tabs.add_child(_button("Aventura", func(): battle_selected = false; _refresh_battle(), "dark"))
+	combat_tabs.add_child(_button("Combate", func(): battle_selected = true; _refresh_battle(), "orange"))
+	chat_column.add_child(paper)
 	story = RichTextLabel.new()
 	story.bbcode_enabled = false
 	story.selection_enabled = true
@@ -627,33 +707,89 @@ func _game_screen() -> void:
 	story.add_theme_constant_override("line_separation", 9)
 	story.gui_input.connect(func(event): if event is InputEventMouseButton and event.pressed and is_instance_valid(text_tween): text_tween.kill(); story.visible_characters = -1)
 	paper.add_child(story)
-	var info := _hbox(ui, 15)
-	location_label = _label("", 16, GOLD, true)
-	location_label.size_flags_horizontal = SIZE_EXPAND_FILL
-	info.add_child(location_label)
-	clock_label = _label("", 14, GOLD)
-	info.add_child(clock_label)
-	combat_row = _hbox(ui, 8)
-	suggestion_row = HFlowContainer.new()
-	ui.add_child(suggestion_row)
-	var row := _hbox(ui, 8)
+	battle_panel = _vbox(chat_column, 6)
+	var row := _hbox(chat_column, 8)
 	input = TextEdit.new()
-	input.custom_minimum_size.y = 64
+	input.custom_minimum_size.y = 82
 	input.size_flags_horizontal = SIZE_EXPAND_FILL
 	input.placeholder_text = "Narre a cena para o aventureiro…" if state.world.mode == "master" else "O que você faz a seguir?"
 	input.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 	input.gui_input.connect(_input_key)
 	row.add_child(input)
+	var send_actions := _vbox(row, 6)
 	send_button = _button("Enviar", _send, "orange")
-	row.add_child(send_button)
+	send_button.size_flags_vertical = SIZE_EXPAND_FILL
+	send_actions.add_child(send_button)
 	cancel_button = _button("Cancelar", _cancel, "dark")
-	row.add_child(cancel_button)
-	var hud_panel := PanelContainer.new()
-	hud_panel.add_theme_stylebox_override("panel", _box(Color("2c241c"), Color("756129"), 6, 8))
-	ui.add_child(hud_panel)
-	hud_row = _hbox(hud_panel, 12)
-	hud_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	send_actions.add_child(cancel_button)
+	action_panel = PanelContainer.new()
+	action_panel.add_theme_stylebox_override("panel", _box(Color("2c241c"), Color("756129"), 8, 16))
+	game_columns.add_child(action_panel)
+	var action_scroll := ScrollContainer.new()
+	action_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	action_panel.add_child(action_scroll)
+	action_content = _vbox(action_scroll, 14)
+	action_content.size_flags_horizontal = SIZE_EXPAND_FILL
+	action_content.add_child(_label("Nesta aventura", 25, CREAM, true))
+	location_label = _paragraph(action_content, "", GOLD, 16)
+	clock_label = _paragraph(action_content, "", GOLD, 14)
+	action_content.add_child(HSeparator.new())
+	combat_row = _vbox(action_content, 8)
+	suggestion_heading = _label("O que fazer?", 24, CREAM, true)
+	action_content.add_child(suggestion_heading)
+	suggestion_row = _vbox(action_content, 10)
+	action_content.add_child(HSeparator.new())
+	drawer_shade = ColorRect.new()
+	drawer_shade.color = Color(0, 0, 0, .65)
+	game_host.add_child(drawer_shade)
+	drawer_shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	drawer_shade.gui_input.connect(func(event):
+		if event is InputEventMouseButton and event.pressed: drawer = ""; _layout_game())
+	drawer_shade.hide()
 	_refresh_hud()
+
+func _toggle_fullscreen() -> void:
+	get_window().mode = Window.MODE_MAXIMIZED if get_window().mode == Window.MODE_FULLSCREEN else Window.MODE_FULLSCREEN
+
+func _toggle_drawer(which: String) -> void:
+	drawer = "" if drawer == which else which
+	_layout_game()
+
+func _resize_layout() -> void:
+	var pixels := get_window().size
+	var target := Vector2i(mini(1152, pixels.x), mini(720, pixels.y)) if screen == "inGame" else Vector2i(1152, 720)
+	if get_window().content_scale_size != target: get_window().content_scale_size = target
+	_layout_game.call_deferred()
+
+func _layout_game() -> void:
+	var dimensions := get_viewport_rect().size
+	if is_instance_valid(modal_margin):
+		for edge in ["left", "right"]: modal_margin.add_theme_constant_override("margin_" + edge, maxi(12, int((dimensions.x - 1100) / 2)))
+	if screen != "inGame" or not is_instance_valid(game_host): return
+	var wide := dimensions.x >= 1100
+	compact_bar.visible = not wide
+	for edge in ["left", "right", "top", "bottom"]: view.add_theme_constant_override("margin_" + edge, 16 if wide else 8)
+	for pair in [[navigation_panel, "navigation", 224.0], [action_panel, "actions", 260.0]]:
+		var panel: PanelContainer = pair[0]
+		if wide:
+			if panel.get_parent() != game_columns: panel.reparent(game_columns, false)
+			panel.custom_minimum_size.x = pair[2]
+			panel.visible = true
+		else:
+			if panel.get_parent() != game_host: panel.reparent(game_host, false)
+			panel.custom_minimum_size.x = 0
+			panel.visible = drawer == pair[1]
+			panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+			panel.position = Vector2(0 if pair[1] == "navigation" else maxf(0, game_host.size.x - 300), 0)
+			panel.size = Vector2(minf(300, game_host.size.x), game_host.size.y)
+			game_host.move_child(panel, -1)
+	if wide:
+		game_columns.move_child(navigation_panel, 0)
+		game_columns.move_child(chat_column, 1)
+		game_columns.move_child(action_panel, 2)
+		drawer = ""
+	drawer_shade.visible = not wide and not drawer.is_empty()
+	story.add_theme_font_size_override("normal_font_size", 20 if dimensions.x >= 700 else 17)
 
 func _refresh_hud() -> void:
 	if not is_instance_valid(hud_row): return
@@ -671,13 +807,33 @@ func _refresh_hud() -> void:
 			if images.has(name_): icon_path = "res://assets/icons/%s.png" % images[name_]
 		if ResourceLoader.exists(icon_path): button.icon = load(icon_path)
 		button.expand_icon = true
-		button.add_theme_constant_override("icon_max_width", 42 if prefs.illustratedIcons else 30)
-		button.custom_minimum_size = Vector2(64, 58) if prefs.illustratedIcons else Vector2(58, 48)
+		button.add_theme_constant_override("icon_max_width", 62 if prefs.illustratedIcons else 42)
+		button.custom_minimum_size = Vector2(92, 96)
+		button.size_flags_horizontal = SIZE_EXPAND_FILL
+		button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		button.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+		button.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		button.text = name_
+		button.add_theme_font_size_override("font_size", 14)
 		button.add_theme_stylebox_override("normal", _box(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 4, 8))
 		var count: int = state.world.notifications.get(name_, 0)
 		if count > 0:
-			button.text = str(count) if count < 10 else "9+"
-			button.add_theme_font_size_override("font_size", 12)
+			var badge := PanelContainer.new()
+			badge.name = "NotificationBadge"
+			badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			badge.add_theme_stylebox_override("panel", _box(Color("d92b38"), Color("ffbec3"), 14, 4))
+			button.add_child(badge)
+			badge.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+			badge.offset_left = -42 if count >= 100 else -34
+			badge.offset_right = -2
+			badge.offset_top = 2
+			badge.offset_bottom = 30
+			badge.custom_minimum_size = Vector2(32, 28)
+			var number := _label(str(count) if count < 100 else "99+", 17, Color.WHITE)
+			number.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			number.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			badge.add_child(number)
+			button.accessibility_name = "%s: %d novidades" % [name_, count]
 		hud_row.add_child(button)
 
 func _refresh_game(animate: bool = false) -> void:
@@ -699,7 +855,7 @@ func _refresh_game(animate: bool = false) -> void:
 		story.add_text(speaker + ":\n")
 		story.pop()
 		story.add_text(turn.text + "\n\n")
-	if not pending.is_empty() and not opening:
+	if not pending.is_empty() and not opening and not control_turn and not _roll_in_history(pending):
 		story.add_text(("Mestre" if mode == "master" else character.characterName) + ":\n" + pending + "\n\n")
 	if client.busy: story.add_text("…")
 	if animate and prefs.textSpeed != "Rápido":
@@ -711,38 +867,48 @@ func _refresh_game(animate: bool = false) -> void:
 	var time: Dictionary = state.world.gameTime
 	clock_label.text = "%02d:%02d — %02d/%02d/%04d" % [time.hour, time.minute, time.day, time.month, time.year]
 	input.editable = not client.busy
-	send_button.disabled = client.busy or state.world.initiativePending
+	send_button.disabled = client.busy or rolling
+	send_button.text = "D20" if state.world.dice or state.world.initiativePending else "Enviar"
+	send_button.tooltip_text = "Rolar e enviar o resultado ao mestre" if state.world.dice else "Enviar ação"
 	cancel_button.visible = client.busy
 	_clear(suggestion_row)
 	if prefs.showActionSuggestions and not client.busy and not state.world.dice and state.world.enemies.is_empty():
 		for suggestion in state.world.suggestions:
 			var action: String = suggestion
-			var button := _button(action, func(): input.text = action; _send(), "dark")
+			var button := _button(action, func(): input.text = action; drawer = ""; _layout_game(); _send(), "dark")
 			button.add_theme_font_size_override("font_size", 15)
-			button.custom_minimum_size.y = 34
+			button.custom_minimum_size.y = 72
+			button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			suggestion_row.add_child(button)
+	suggestion_heading.visible = suggestion_row.get_child_count() > 0
 	_refresh_combat()
+	_refresh_battle()
 	_refresh_hud()
+	_schedule_enemy()
+	_maybe_tutorial.call_deferred()
 
 func _refresh_combat() -> void:
 	_clear(combat_row)
+	if dev_combat:
+		_paragraph(combat_row, "SIMULAÇÃO DEV • " + ("mestre local, sem API" if dev_offline else "IA configurada"), GOLD, 15)
+		combat_row.add_child(_button("Sair da simulação", _end_combat_lab, "red"))
 	if state.world.initiativePending:
-		combat_row.add_child(_button("Rolar Iniciativa (d20)", func(): state.roll_initiative(); _refresh_game(); _autosave(), "orange"))
+		combat_row.add_child(_button("Rolar Iniciativa (d20)", _initiative_animation, "orange"))
 	elif not state.world.turnOrder.is_empty():
 		var actor: Dictionary = state.actor()
 		var label := _label("Turno: %s  •  Iniciativa %d" % [actor.name, actor.initiative], 15, GOLD)
 		label.size_flags_horizontal = SIZE_EXPAND_FILL
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		combat_row.add_child(label)
-		combat_row.add_child(_button("Ver combate", func(): _open_panel("Inimigos"), "dark"))
+		combat_row.add_child(_button("Ver combate", func(): _show_battle(), "dark"))
 		if actor.type != "player":
-			send_button.disabled = true
-			var next := _button("Resolver turno da IA", func(): _request_turn("É o turno de %s. Resolva apenas a ação de combate deste participante." % actor.name), "orange")
-			next.disabled = client.busy
-			combat_row.add_child(next)
+			send_button.disabled = client.busy or not state.world.dice
+			_paragraph(combat_row, "O turno deste participante será resolvido automaticamente.", GOLD, 14)
 	if state.world.dice and not state.world.initiativePending:
-		var dice := _button("Rolar d20", _roll_dice, "orange")
-		dice.disabled = client.busy
-		combat_row.add_child(dice)
+		var test: Dictionary = state.world.get("diceTest", {})
+		var names := {"strength":"Força", "dexterity":"Destreza", "constitution":"Constituição", "intelligence":"Inteligência", "wisdom":"Sabedoria", "charisma":"Carisma"}
+		_paragraph(combat_row, "Teste de %s • CD %d\n%s\nUse o botão D20 no chat." % [names.get(test.get("attribute", "strength"), "atributo"), int(test.get("difficulty", 12)), test.get("reason", "")], GOLD, 16)
 
 func _input_key(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ENTER and not event.shift_pressed:
@@ -750,34 +916,60 @@ func _input_key(event: InputEvent) -> void:
 		input.accept_event()
 
 func _send() -> void:
-	if client.busy or state.world.initiativePending: return
+	if client.busy or rolling or is_instance_valid(tutorial_layer): return
+	if state.world.initiativePending:
+		_initiative_animation(); return
+	if state.world.dice: _roll_chat(); return
 	if not state.actor().is_empty() and state.actor().type != "player": return
 	var action := input.text.strip_edges()
 	if action.is_empty(): return
-	_request_turn(action)
+	if not state.world.enemies.is_empty(): _queue_player_action(action)
+	else: _request_turn(action)
 
-func _request_turn(action: String, first: bool = false) -> void:
+func _request_turn(action: String, first: bool = false, internal: bool = false) -> void:
 	if client.busy: return
+	if combat_action.is_empty() and state.world.has("pendingCombatAction"): combat_action = state.world.pendingCombatAction.duplicate(true)
+	if not combat_action.is_empty() and combat_action.get("action", "") != action and not state.world.dice:
+		combat_action = {}
+		state.world.erase("pendingCombatAction")
 	if action.length() > 16000: _status("Descreva sua ação em até 16.000 caracteres."); return
 	pending = action
+	control_turn = internal
+	repair_count = 0
 	opening = first
 	operation = "turn"
 	failed_action = ""
 	actor_before = str(state.actor().get("id", ""))
 	var contents: Array = []
-	for turn in state.world.history:
+	for i in range(maxi(0, state.world.history.size() - 24), state.world.history.size()):
+		var turn: Dictionary = state.world.history[i]
+		if turn.get("localRoll", false) and turn.text == action: continue
 		contents.append({"role": turn.role, "parts": [{"text": turn.text}]})
 	contents.append({"role": "user", "parts": [{"text": action}]})
-	client.send(contents, _instruction(), schema if mode == "player" else {})
+	if true:
+		while contents.size() > 1 and JSON.stringify(contents).length() > (2400 if client.provider == "Groq" else 12000): contents.remove_at(0)
+	last_contents = contents.duplicate(true)
+	last_prompt = _instruction()
+	if dev_combat and dev_offline:
+		client.busy = true
+		request_generation += 1
+		_local_combat_reply.call_deferred(request_generation)
+	else:
+		client.send(contents, last_prompt, schema if mode == "player" else {})
 	request_age = 0.0
 	_refresh_game()
 	if client.busy: _status("O mundo está se materializando…" if first else "O mestre está preparando a resposta…")
 	if is_instance_valid(retry_button): retry_button.visible = not failed_action.is_empty()
 
 func _instruction() -> String:
+	if state.world.is_empty(): return "Inicie uma aventura para inspecionar o prompt completo do mestre."
 	var context: Dictionary = state.world.duplicate(true)
 	context.erase("history")
 	context.erase("log")
+	context.observationRule = "No turno de uma criatura, informe enemyAction com actorId, kind e ability (nome exato da técnica quando usada). Isso registra observações de magia sem revelar automaticamente todos os atributos."
+	if combat_action.get("action", "") == pending or combat_action.get("awaitingRoll", false):
+		context.localAction = combat_action.duplicate(true)
+		context.localAction.note = "O cliente descontará uma unidade do consumível e garantirá o custo da habilidade após a resposta. Aplique os efeitos e os recursos finais; NÃO devolva o item usado como item adquirido."
 	context.character.erase("image")
 	if state.world.genre == "Isekai":
 		for skill in context.skills:
@@ -789,21 +981,24 @@ func _instruction() -> String:
 					for stage in skill.get("progression", []):
 						if int(stage.get("level", 0)) == rank: skill.merge(stage, true)
 	if genre != "Bíblico": context.character.erase("provacao")
+	if client.provider == "Groq" and mode == "player":
+		for key in ["notifications", "visited", "suggestions", "version", "id", "pendingCombatAction"]: context.erase(key)
+		return _turn_rules() + "Você é o Mestre de RPG em português brasileiro. Narre em segunda pessoa sem decidir ações/falas do jogador. Use JSON storyText e location, sem Markdown. Use SOMENTE nomes e regras dos catálogos abaixo. inventory contém somente novos itens adquiridos, nunca os existentes; enemies é a lista completa de inimigos vivos com IDs estáveis (vazia encerra combate). Atualize playerStatus com recursos finais. Resolva somente o ator atual em combate, sem inventar rolagens. Para incerteza, retorne diceRollChallenge=true e diceTest com attribute, difficulty 1–40 e reason; espere o d20 real. Sucesso: d20+atributo>=CD. Respeite pendingRoll e localAction; não altere a CD. No Isekai apenas técnicas aprendidas em skills podem ser usadas; a árvore local controla desbloqueios. Não conceda skillPoints/skills no Isekai. Custos, dano, consumíveis e recargas devem ser respeitados. Sem teste/combate, ofereça actionSuggestions. Narração objetiva, até 2 parágrafos. Campos não modificados podem ser omitidos. Catálogos com colunas e linhas: " + JSON.stringify(state.compact_master_catalog()) + "\nEstado e regras atuais: " + JSON.stringify(context)
 	if mode == "master":
 		return "Você é o AVENTUREIRO de um RPG em português brasileiro. O usuário é o MESTRE e narra o mundo. Responda em primeira pessoa apenas com ações, falas e intenções do seu personagem; não controle NPCs nem resultados. Respeite raça, classe, equipamentos e fatos estabelecidos. Use texto simples. Contexto: " + JSON.stringify(context)
-	return """Você é o Mestre de RPG do jogo RPG Maker. Narre em português brasileiro, com escrita envolvente e coerente. Preserve a agência do jogador: não decida ações nem falas dele. Respeite rigorosamente o inventário, habilidades e estado informados. Não conceda itens imaginados pelo jogador. Nunca declare um erro de API como parte da ficção.
+	return _turn_rules() + """Você é o Mestre de RPG do jogo RPG Maker. Narre em português brasileiro, com escrita envolvente e coerente. Preserve a agência do jogador: não decida ações nem falas dele. Respeite rigorosamente o inventário, habilidades e estado informados. Não conceda itens imaginados pelo jogador. Nunca declare um erro de API como parte da ficção.
 Retorne JSON com storyText e location; use os demais campos do esquema para atualizar as mecânicas. storyText é só a narrativa, com parágrafos, sem prefixo Mestre, sem Markdown. Respeite o estilo de descrição solicitado.
 inventory: SOMENTE novos itens realmente adquiridos, com quantidade, tipo e dano de armas; não repita itens existentes. skills: habilidades novas/atualizadas com nível, nível máximo, descrição, custo e dano. bestiary: fichas cumulativas das criaturas com knownInfo. allies: novos aliados. enemies: lista COMPLETA de inimigos vivos, preservando IDs e vida atual; array vazio encerra combate. Não crie inimigos no meio do combate. playerStatus: valores atuais, incluindo XP total atualizado e recursos após custos/danos. No Isekai, as habilidades e os pontos são controlados pela árvore local: não conceda nem altere habilidades ou pontos pela resposta. Considere apenas as habilidades já aprendidas em skills ao narrar seus efeitos.
 Em combate, resolva APENAS o turno do ator atual. Declare explicitamente dano, aplique passivas e custos, atualize health dos alvos. Não restaure a vida automaticamente. Fora de combate, peça teste d20 para incertezas usando diceRollChallenge e diceTest com attribute (strength/dexterity/constitution/intelligence/wisdom/charisma), difficulty (CD inteira 1–40) e reason. A regra é d20 + valor do atributo, sucesso quando total >= CD. Não altere a CD após a rolagem. Respeite o resultado calculado localmente; espere o resultado real do jogador. Termine em uma decisão, com 3 a 5 actionSuggestions quando não houver teste ou combate. Se o jogador quer falar com um NPC, peça a fala dele em vez de inventá-la.
 Mecânicas dos gêneros: Arena usa ouro, loja e treino; Bíblico usa a provação escolhida e npcDialogue de O Inimigo; Dungeon usa tesouros com raridade e estrelas; Exploração Espacial atualiza shipStatus (casco, escudos, combustível, sucata); Fantasia atualiza factionReputation; Guerra atualiza squadStatus e moral; Investigação atualiza evidenceBoard com IDs estáveis; Isekai usa progressão, habilidades e pontos; Terror usa sanidade e consequências de medo. Adapte ao cenário escolhido.
 Desbloqueie conquistas apenas quando a condição for cumprida, usando um ID do catálogo. Atualize gameTime e location coerentemente. Não exponha JSON na narrativa.
-""" + "\nEstilo: " + prefs.textDescription + "\nEstado atual: " + JSON.stringify(context) + "\nConquistas deste gênero: " + JSON.stringify(state.catalog.achievements.filter(func(a): return a.genre == genre))
+""" + "\nEstilo: " + prefs.textDescription + "\nCatálogos autorizados (use nomes exatos; não invente monstros, itens ou habilidades): " + JSON.stringify(state.compact_master_catalog()) + "\nEstado atual: " + JSON.stringify(context) + "\nConquistas deste gênero: " + JSON.stringify(state.catalog.achievements.filter(func(a): return a.genre == genre))
 
 func _reply(text: String) -> void:
 	var kind := operation
 	operation = ""
 	if kind == "probe":
-		_status("Conexão confirmada: o Gemini respondeu com sucesso.")
+		_status("Conexão confirmada: " + client.provider + " respondeu com sucesso.")
 		if is_instance_valid(probe_label): probe_label.text = "Conexão confirmada. Pronto para jogar."
 		return
 	if kind == "appearance":
@@ -819,30 +1014,66 @@ func _reply(text: String) -> void:
 	var update: Dictionary
 	if mode == "master": update = {"storyText": text}
 	else:
-		var parser := JSON.new()
-		var payload := text.strip_edges().trim_prefix("```json").trim_prefix("```").trim_suffix("```").strip_edges()
-		if parser.parse(payload) != OK:
+		update = state.normalize_response(Gemini.parse_game_json(text))
+		var invalid := "Resposta sem JSON narrativo válido." if update.is_empty() else state.catalog_error(update)
+		if not invalid.is_empty():
 			operation = "turn"
-			_failure("O Gemini respondeu fora do formato do jogo. O estado foi preservado. Tente novamente.")
-			return
-		update = state.normalize_response(parser.data)
-		if update.is_empty():
-			operation = "turn"
-			_failure("A resposta não contém uma narrativa válida. Tente novamente.")
+			if repair_count == 0:
+				repair_count = 1
+				last_prompt = _instruction() + "\nCORREÇÃO OBRIGATÓRIA: " + invalid + " Retorne o turno solicitado em JSON completo e válido, usando exclusivamente os catálogos. Não refaça a rolagem."
+				client.send(last_contents, last_prompt, schema)
+				_refresh_game()
+				return
+			_failure(invalid + " A partida e a rolagem foram preservadas. Tente novamente ou selecione outro provedor.")
 			return
 	if opening: update.erase("inventory") # Initial weapon already belongs to the character.
+	if update.get("diceRollChallenge", false):
+		var challenge: Dictionary = update.diceTest
+		state.world.pendingTestAction = pending
+		update = {"storyText": "Antes de resolver a ação: %s. Faça o teste solicitado; o resultado ainda não foi aplicado." % challenge.reason, "diceRollChallenge": true, "diceTest": challenge}
+	state.canonicalize_update(update)
+	var before: Dictionary = state.world.duplicate(true)
 	var old_actor := actor_before
-	state.commit(pending, update, opening)
-	if not old_actor.is_empty(): state.advance_turn(old_actor)
+	state.commit(pending, update, opening or control_turn)
+	if not state.world.dice:
+		var source_action := str(before.get("pendingTurn", {}).get("action", before.get("pendingTestAction", pending)))
+		state.observe_turn(before, update, old_actor, source_action)
+		state.world.erase("pendingTurn")
+		state.world.erase("pendingTestAction")
+	if not state.world.dice and old_actor == "player":
+		var cooldowns: Dictionary = state.world.get("skillCooldowns", {})
+		for key in cooldowns: cooldowns[key] = maxi(0, int(cooldowns[key]) - 1)
+		state.world.skillCooldowns = cooldowns
+	var related: bool = combat_action.get("action", "") == pending or combat_action.get("awaitingRoll", false)
+	if related and not state.world.dice:
+		if combat_action.has("item"):
+			for item in state.world.inventory:
+				if item.name == combat_action.item:
+					item.quantity = maxi(0, int(item.get("quantity", 1)) - 1)
+					break
+			state.world.inventory = state.world.inventory.filter(func(item): return int(item.get("quantity", 1)) > 0)
+		if combat_action.has("pool"):
+			var pool: String = combat_action.pool
+			state.world.status[pool] = mini(int(state.world.status[pool]), int(combat_action.remaining))
+		if combat_action.has("skill"):
+			if not state.world.has("skillCooldowns"): state.world.skillCooldowns = {}
+			state.world.skillCooldowns[combat_action.skill] = int(combat_action.get("cooldown", 0))
+	if related and state.world.dice:
+		combat_action.awaitingRoll = true
+		state.world.pendingCombatAction = combat_action.duplicate(true)
+	else:
+		combat_action = {}
+		state.world.erase("pendingCombatAction")
+	if not old_actor.is_empty() and not state.world.dice: state.advance_turn(old_actor)
 	pending = ""
 	opening = false
 	failed_action = ""
 	if is_instance_valid(input): input.text = ""
 	_refresh_game(true)
-	_status("Resposta recebida do Gemini.")
+	_status("Resposta do mestre local de teste." if dev_combat and dev_offline else "Resposta recebida de " + client.provider + ".")
 	for id in state.world.achievements:
-		if not id in total_unlocked: total_unlocked.append(id)
-	storage.write_json(storage.base.path_join("achievements.json"), total_unlocked)
+		if not dev_combat and not id in total_unlocked: total_unlocked.append(id)
+	if not dev_combat: storage.write_json(storage.base.path_join("achievements.json"), total_unlocked)
 	_autosave()
 	if prefs.autoNarrate: _speak(text if mode == "master" else update.storyText)
 	_update_music()
@@ -853,7 +1084,8 @@ func _failure(text: String) -> void:
 	if operation == "turn":
 		failed_action = pending
 		failed_opening = opening
-		if is_instance_valid(input) and not opening: input.text = pending
+		failed_control = control_turn
+		if is_instance_valid(input) and not opening and not control_turn and not state.world.dice: input.text = pending
 		pending = ""
 		_refresh_game()
 	operation = ""
@@ -863,14 +1095,16 @@ func _failure(text: String) -> void:
 
 func _retry() -> void:
 	if client.busy or failed_action.is_empty(): return
-	_request_turn(failed_action, failed_opening)
+	_request_turn(failed_action, failed_opening, failed_control)
 
 func _cancel() -> void:
+	request_generation += 1
 	client.cancel()
 	if operation == "turn":
 		failed_action = pending
 		failed_opening = opening
-		if is_instance_valid(input) and not opening: input.text = pending
+		failed_control = control_turn
+		if is_instance_valid(input) and not opening and not control_turn and not state.world.dice: input.text = pending
 	pending = ""
 	operation = ""
 	_refresh_game()
@@ -879,7 +1113,8 @@ func _cancel() -> void:
 
 func _roll_dice() -> void:
 	if client.busy: return
-	_attribute_test()
+	if state.world.dice: _roll_chat()
+	else: _attribute_test()
 
 func _status(text: String, error: bool = false) -> void:
 	if is_instance_valid(message):
@@ -887,20 +1122,21 @@ func _status(text: String, error: bool = false) -> void:
 		message.add_theme_color_override("font_color", Color("ffb19a") if error else GOLD)
 
 func _connection_status() -> String:
-	return "Gemini: conexão confirmada." if client.verified else client.credential_source + " • Conexão ainda não testada."
+	return client.provider + (": conexão confirmada." if client.verified else " • Conexão ainda não testada.")
 
 func _process(delta: float) -> void:
 	if client != null and client.busy:
 		request_age += delta
-		if operation == "turn": _status("O mundo está se materializando… %ds • Você pode cancelar." % int(request_age) if opening else "Aguardando o Gemini… %ds • Você pode cancelar." % int(request_age))
+		if operation == "turn": _status("O mundo está se materializando… %ds • Você pode cancelar." % int(request_age) if opening else "%s • %ds • Você pode cancelar." % [client.status_message, int(request_age)])
 
 func _save(kind: String = "adventures") -> void:
+	if dev_combat: _status("Simulação Dev: a aventura original está preservada."); return
 	if state.world.is_empty(): return
 	if storage.save_world(state.world, kind): _status("Personagem salvo." if kind == "characters" else "Aventura salva.")
 	else: _status(storage.last_error, true)
 
 func _autosave() -> void:
-	if prefs.autoSave: _save()
+	if prefs.autoSave and not dev_combat: _save()
 
 func _speak(text: String) -> void:
 	var voices := DisplayServer.tts_get_voices_for_language("pt")
@@ -947,8 +1183,9 @@ func _modal(title: String) -> VBoxContainer:
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	overlay.add_child(shade)
 	var margin := MarginContainer.new()
+	modal_margin = margin
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for edge in ["left", "right"]: margin.add_theme_constant_override("margin_" + edge, 145)
+	for edge in ["left", "right"]: margin.add_theme_constant_override("margin_" + edge, maxi(12, int((get_viewport_rect().size.x - 1100) / 2)))
 	for edge in ["top", "bottom"]: margin.add_theme_constant_override("margin_" + edge, 45)
 	overlay.add_child(margin)
 	var panel := PanelContainer.new()
@@ -984,6 +1221,15 @@ func _close_modal() -> void:
 	probe_label = null
 
 func _unhandled_key_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F11:
+		_toggle_fullscreen()
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed("ui_cancel") and not drawer.is_empty() and not is_instance_valid(overlay):
+		drawer = ""
+		_layout_game()
+		get_viewport().set_input_as_handled()
+		return
 	if event.is_action_pressed("ui_cancel") and is_instance_valid(image_layer):
 		image_layer.queue_free()
 		get_viewport().set_input_as_handled()
@@ -993,6 +1239,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _open_panel(name_: String) -> void:
+	drawer = ""
+	_layout_game()
 	if name_ == "Configurações": _settings_modal(); return
 	if state.world.is_empty(): return
 	state.world.notifications[name_] = 0
@@ -1143,19 +1391,26 @@ func _tree_panel(box: Node) -> void:
 	box.add_child(summary)
 	_paragraph(box, "Arraste para explorar • Roda do mouse para zoom • Clique em um nó para ver seus detalhes", Color("85652e"), 14)
 	var search := LineEdit.new()
-	search.placeholder_text = "Destacar habilidade pelo nome…"
+	search.placeholder_text = "Buscar habilidade ou especialização…"
 	box.add_child(search)
 	var graph := preload("res://scripts/skill_constellation.gd").new()
 	graph.game = state
-	var layout := _hbox(box, 14)
-	graph.custom_minimum_size.x = 580
+	var filters := HFlowContainer.new()
+	box.add_child(filters)
+	for choice in [["Visão geral", ""], ["Guerreiro", "Combate"], ["Mago", "Arcano"], ["Ladino", "Sobrevivência"]]:
+		var branch: String = choice[1]
+		filters.add_child(_button(choice[0], func(): graph.focus_path(branch), "dark"))
+	var layout: BoxContainer = HBoxContainer.new() if get_viewport_rect().size.x >= 1000 else VBoxContainer.new()
+	box.add_child(layout)
+	graph.custom_minimum_size.x = 0
 	graph.size_flags_horizontal = SIZE_EXPAND_FILL
 	layout.add_child(graph)
 	var detail := _vbox(layout, 10)
-	detail.custom_minimum_size.x = 290
+	detail.custom_minimum_size.x = 270
+	detail.size_flags_stretch_ratio = 0.38
 	detail.size_flags_horizontal = SIZE_EXPAND_FILL
 	var actions := _hbox(box)
-	actions.add_child(_button("Centralizar", func(): graph.pan = Vector2.ZERO; graph.zoom = .48; graph.queue_redraw(), "dark"))
+	actions.add_child(_button("Centralizar", func(): graph.focus_path(""), "dark"))
 	var legend := _paragraph(actions, "Dourado: aprendido • Colorido: disponível • Cinza: bloqueado", Color("85652e"), 14)
 	legend.size_flags_horizontal = SIZE_EXPAND_FILL
 	_paragraph(detail, "Selecione um talento para consultar seus valores e pré-requisitos.")
@@ -1165,6 +1420,7 @@ func _tree_panel(box: Node) -> void:
 		for node in state.skill_tree():
 			if node.treeId != id: continue
 			var rank: int = state.tree_rank(node)
+			_paragraph(detail, str(node.get("specialization", node.branch)) + " · " + ("Passiva" if state.skill_is_passive(node) else "Ativa") + " · Nível " + str(node.requiredLevel), Color("85652e"), 16)
 			var card := _card(detail, "%s · %d/%d" % [node.name, rank, node.get("maxLevel", 1)], str(node.get("summary", node.get("description", ""))))
 			_skill_details(card, node, maxi(1, rank))
 			var reason: String = state.tree_block(node)
@@ -1222,9 +1478,7 @@ func _creatures_panel(box: Node, field: String) -> void:
 	for creature in state.world[field]:
 		var record: Dictionary = creature.duplicate(true)
 		if field == "bestiary":
-			for base in catalog:
-				if str(base.name).to_lower() == str(creature.name).to_lower(): record = base.duplicate(true); record.merge(creature, true); break
-			_monster_card(box, record)
+			_monster_card(box, state.known_creature(str(creature.name)))
 		else:
 			var card := _card(box, creature.name)
 			_paragraph(_fold(card), str(creature.get("description", "")))
@@ -1234,7 +1488,9 @@ func _enemies_panel(box: Node) -> void:
 	for i in state.world.enemies.size():
 		var enemy: Dictionary = state.world.enemies[i]
 		var card := _card(box, enemy.name, str(enemy.get("description", "")))
-		_resource_bar(card, "Vida", enemy.health, enemy.maxHealth, Color("a83b30"))
+		if mode == "master" or state.knowledge(enemy.name).fields.has("health"):
+			_resource_bar(card, "Vida", enemy.health, enemy.maxHealth, Color("a83b30"))
+		else: _paragraph(card, "Vida: desconhecida. Observe e enfrente esta espécie para aprender.")
 		if mode == "master":
 			var index: int = i
 			var row := _hbox(card)
@@ -1328,22 +1584,47 @@ func _pretty(value: Variant) -> String:
 func _settings_modal() -> void:
 	var box := _modal("Configurações")
 	probe_label = _paragraph(box, _connection_status(), Color("806325"), 14)
-	box.add_child(_label("Chave Gemini", 21, BROWN, true))
+	box.add_child(_label("Provedor da conversa", 21, BROWN, true))
+	var provider_select := OptionButton.new()
+	var providers := ["Gemini", "Groq", "OpenRouter"]
+	for value in providers: provider_select.add_item(value)
+	provider_select.select(maxi(0, providers.find(client.provider)))
+	box.add_child(provider_select)
+	_paragraph(box, "Groq e OpenRouter oferecem opções gratuitas com limites. OpenRouter/free usa somente modelos gratuitos. Informe sua própria chave; ela vale apenas nesta sessão. Retratos continuam usando Gemini.", BROWN, 14)
+	box.add_child(_label("Chave do provedor selecionado", 21, BROWN, true))
 	var key_edit := LineEdit.new()
 	key_edit.secret = true
 	key_edit.placeholder_text = "Usar a chave original ou informar outra nesta sessão"
-	key_edit.text = client.api_key
+	key_edit.text = client.text_key()
 	box.add_child(key_edit)
 	_paragraph(box, "O jogo procura uma chave local protegida pelo Windows, a configuração original e a variável de ambiente. A chave não entra nos saves ou na exportação. Uma chave digitada aqui vale apenas nesta sessão.", BROWN, 13)
 	var model_edit := LineEdit.new()
-	model_edit.text = client.model
+	model_edit.text = client.text_model()
 	box.add_child(_label("Modelo da conversa", 19, BROWN, true))
 	box.add_child(model_edit)
 	var image_edit := LineEdit.new()
 	image_edit.text = client.image_model
 	box.add_child(_label("Modelo de retratos", 19, BROWN, true))
 	box.add_child(image_edit)
+	provider_select.item_selected.connect(func(index):
+		var chosen: String = providers[index]
+		key_edit.text = client.api_key if chosen == "Gemini" else str(client.provider_keys[chosen])
+		model_edit.text = client.model if chosen == "Gemini" else str(client.provider_models[chosen]))
 	var apply_api := func():
+		if client.busy: return
+		client.provider = providers[provider_select.selected]
+		client.verified = false
+		client.image_model = image_edit.text.strip_edges()
+		prefs.imageModel = client.image_model
+		if client.provider != "Gemini":
+			client.provider_keys[client.provider] = key_edit.text.strip_edges()
+			client.provider_models[client.provider] = model_edit.text.strip_edges()
+			prefs.provider = client.provider
+			prefs.groqModel = client.provider_models.Groq
+			prefs.routerModel = client.provider_models.OpenRouter
+			_save_prefs()
+			return
+		prefs.provider = client.provider
 		if client.api_key != key_edit.text.strip_edges() or client.model != model_edit.text.strip_edges(): client.verified = false
 		client.api_key = key_edit.text.strip_edges()
 		client.model = model_edit.text.strip_edges()
@@ -1351,7 +1632,7 @@ func _settings_modal() -> void:
 		prefs.model = client.model
 		prefs.imageModel = client.image_model
 		_save_prefs()
-	var test := _button("Testar conexão com Gemini", func():
+	var test := _button("Testar conexão", func():
 		if client.busy: return
 		apply_api.call()
 		operation = "probe"
@@ -1386,7 +1667,16 @@ func _settings_modal() -> void:
 	box.add_child(_label("Volume", 18, BROWN))
 	box.add_child(volume)
 	box.add_child(_button("Retomar Música" if paused_music else "Pausar Música", func(): paused_music = not paused_music; music.stream_paused = paused_music))
-	box.add_child(_button("Aplicar configuração Gemini", func(): apply_api.call(); _close_modal(); _status(_connection_status()), "green"))
+	box.add_child(_button("Aplicar configuração de IA", func(): apply_api.call(); _close_modal(); _status(_connection_status()), "green"))
+	box.add_child(_button("Dev • Ver prompt do mestre", _prompt_inspector, "dark"))
+	box.add_child(_button("Dev • Laboratório de combate", _combat_lab, "dark"))
+	if screen == "inGame": box.add_child(_button("Rever tutorial com destaque", _start_tutorial, "dark"))
+	box.add_child(_label("Tempo máximo por tentativa de IA (segundos)", 17, BROWN))
+	var timeout_edit := SpinBox.new()
+	timeout_edit.min_value = 30; timeout_edit.max_value = 120; timeout_edit.step = 5
+	timeout_edit.value = prefs.requestTimeout
+	timeout_edit.value_changed.connect(func(value): prefs.requestTimeout = value; client.text_timeout = value; _save_prefs())
+	box.add_child(timeout_edit)
 	if screen == "inGame":
 		box.add_child(_button("Salvar Aventura", func(): _save(); _close_modal(), "blue"))
 		box.add_child(_button("Salvar Personagem", func(): _save("characters"); _close_modal(), "green"))
@@ -1396,6 +1686,7 @@ func _save_prefs() -> void:
 	if not storage.write_json(storage.base.path_join("settings.json"), prefs): _status(storage.last_error, true)
 
 func _confirm_menu() -> void:
+	if dev_combat: _end_combat_lab(); return
 	var dialog := ConfirmationDialog.new()
 	dialog.title = "Voltar ao menu?"
 	dialog.dialog_text = "A aventura atual será salva antes de voltar. A resposta em andamento será cancelada."
@@ -1535,13 +1826,17 @@ func _monster_card(parent: Node, creature: Dictionary) -> void:
 	var info := _vbox(row, 7)
 	info.size_flags_horizontal = SIZE_EXPAND_FILL
 	info.add_child(_label(creature.name, 24, BROWN, true))
-	_paragraph(info, "%s • Nível %s • Vida %s" % [creature.get("type", "Desconhecido"), creature.get("level", "?"), creature.get("health", "?")], Color("85652e"), 15)
+	_paragraph(info, "%s • Nível %s • Vida %s" % [creature.get("type", "Desconhecido"), _stat_text(creature.get("level", "?")), _stat_text(creature.get("health", "?"))], Color("85652e"), 15)
 	_paragraph(info, "Dano: %s (%s) • Magia: %s" % [creature.get("damage", "Não revelado"), creature.get("damageType", "?"), creature.get("magicAptitude", "Não revelada")], BROWN, 15)
 	var details := _fold(card)
 	_paragraph(details, str(creature.get("details", creature.get("description", ""))), BROWN, 16)
 	for pair in [["Dano mínimo", "damageMin"], ["Dano máximo", "damageMax"], ["Defesa", "armor"], ["Mana", "mana"], ["Custo de mana", "attackCost"], ["Alcance (m)", "attackRange"], ["Recarga (turnos)", "cooldown"], ["Habitat", "habitat"], ["Técnica", "ability"], ["Fraqueza", "weakness"]]:
-		if creature.has(pair[1]): _paragraph(details, pair[0] + ": " + str(creature[pair[1]]), BROWN, 15)
-	if creature.get("knownInfo") is Dictionary: _paragraph(details, _pretty(creature.knownInfo), BROWN, 15)
+		if creature.has(pair[1]): _paragraph(details, pair[0] + ": " + _stat_text(creature[pair[1]]), BROWN, 15)
+	if creature.has("evidence"):
+		for note in creature.evidence: _paragraph(details, "• " + str(note), Color("85652e"), 14)
+		if creature.get("damageObserved", []).size() > 0: _paragraph(details, "Danos sofridos observados: " + str(creature.damageObserved), BROWN, 15)
+		for key in ["armor", "mana", "ability", "weakness"]:
+			if not creature.has(key): _paragraph(details, {"armor":"Defesa", "mana":"Mana", "ability":"Técnica", "weakness":"Fraqueza"}[key] + ": ainda desconhecida", BROWN, 15)
 
 func _skill_details(parent: Node, skill: Dictionary, rank: int) -> void:
 	var current: Dictionary = skill.duplicate(true)
@@ -1700,9 +1995,18 @@ func _attribute_test(attribute: String = "") -> void:
 		dc.editable = false
 		submit.disabled = client.busy
 	roll.pressed.connect(func():
+		if rolling: return
 		result.merge(state.attribute_roll(State.ATTRIBUTES[choice.selected], int(dc.value)), true)
 		_play_sfx("dice/dice-95077.mp3")
 		if state.world.dice: state.world.pendingRoll = result.duplicate(true); _autosave()
+		roll.disabled = true
+		if not test_mode:
+			dialog.hide()
+			rolling = true
+			await _animate_die(result)
+			rolling = false
+			if not is_instance_valid(dialog): return
+			dialog.popup_centered(Vector2i(500,460))
 		display.call())
 	submit.pressed.connect(func():
 		dialog.hide()
@@ -1717,7 +2021,382 @@ func _attribute_test(attribute: String = "") -> void:
 	if is_instance_valid(dialog): dialog.popup_centered(Vector2i(500, 460))
 
 const ITEM_RARITIES = ["Comum", "Incomum", "Raro", "Épico", "Lendário", "Mítico", "Divino"]
+func _roll_in_history(action: String) -> bool:
+	return not state.world.history.is_empty() and state.world.history.back().get("localRoll", false) and state.world.history.back().text == action
+
+func _roll_chat() -> void:
+	if client.busy or rolling or not state.world.dice: return
+	var result: Dictionary = state.world.get("pendingRoll", {})
+	if result.is_empty():
+		var test: Dictionary = state.world.get("diceTest", {})
+		result = state.attribute_roll(str(test.get("attribute", "strength")), int(test.get("difficulty", 12)))
+		state.world.pendingRoll = result
+		_autosave()
+		_play_sfx("dice/dice-95077.mp3")
+	var names := ["Força", "Destreza", "Constituição", "Inteligência", "Sabedoria", "Carisma"]
+	var action := "[Teste de %s: d20=%d + atributo=%d = %d; dificuldade=%d; %s]" % [names[State.ATTRIBUTES.find(result.attribute)], result.roll, result.bonus, result.total, result.difficulty, "SUCESSO" if result.success else "FALHA"]
+	if not test_mode:
+		rolling = true
+		_refresh_game()
+		await _animate_die(result)
+		rolling = false
+	if not _roll_in_history(action): state.world.history.append({"role": "user", "text": action, "localRoll": true})
+	_autosave()
+	_request_turn(action)
+
+func _prompt_inspector() -> void:
+	var box := _modal("Dev • Prompt do mestre")
+	_paragraph(box, "Instruções e contexto enviados à IA. Somente leitura; chaves de API não fazem parte deste painel.", BROWN, 14)
+	var tabs := TabContainer.new()
+	tabs.custom_minimum_size.y = 440
+	box.add_child(tabs)
+	for entry in [["Atual", _instruction()], ["Último envio", last_prompt + "\n\nMensagens:\n" + JSON.stringify(last_contents, "  ")], ["Diagnóstico", JSON.stringify(client.last_diagnostic, "  ")]]:
+		var edit := TextEdit.new()
+		edit.name = entry[0]
+		edit.editable = false
+		edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+		edit.text = entry[1]
+		tabs.add_child(edit)
+
+func _show_battle() -> void:
+	battle_selected = true
+	drawer = ""
+	_layout_game()
+	_refresh_battle()
+
+func _resolve_actor() -> void:
+	if client.busy or state.world.dice or state.world.initiativePending: return
+	var actor: Dictionary = state.actor()
+	if actor.is_empty() or actor.type == "player": return
+	_request_turn("É o turno de %s. Resolva apenas a ação de combate deste participante." % actor.name, false, true)
+
+func _battle_can_act() -> bool:
+	return not client.busy and not rolling and int(state.world.status.health) > 0 and not state.world.dice and not state.world.initiativePending and (state.actor().is_empty() or state.actor().type == "player")
+
+func _battle_skill(learned: Dictionary) -> Dictionary:
+	var skill := learned.duplicate(true)
+	if state.world.genre == "Isekai":
+		for node in state.skill_tree():
+			if node.name == skill.name:
+				var rank := int(skill.get("level", 1))
+				skill.merge(node, true)
+				skill.level = rank
+	for stage in skill.get("progression", []):
+		if int(stage.get("level", 0)) == int(skill.get("level", 1)): skill.merge(stage, true)
+	return skill
+
+func _battle_use(action: String, details: Dictionary = {}) -> void:
+	if not _battle_can_act(): return
+	_queue_player_action(action, details)
+
+func _refresh_battle() -> void:
+	if not is_instance_valid(battle_panel): return
+	var active: bool = not state.world.enemies.is_empty()
+	if active and not battle_active: battle_selected = true
+	battle_active = active
+	combat_tabs.visible = active
+	battle_panel.visible = active and battle_selected
+	_clear(battle_panel)
+	if not battle_panel.visible: return
+	var status: Dictionary = state.world.status
+	var actor: Dictionary = state.actor()
+	var turn := "Role a iniciativa no D20" if state.world.initiativePending else "Turno: " + str(actor.get("name", "Você"))
+	_paragraph(battle_panel, "%s • Vida %d/%d • Mana %d • Energia %d" % [turn, status.health, status.maxHealth, status.mana, status.energy], GOLD, 15)
+	var category_row := _hbox(battle_panel, 6)
+	for title in ["Inimigos", "Habilidades", "Consumíveis"]:
+		var value: String = title
+		var button := _button(value, func(): combat_category = value; _refresh_battle(), "orange" if combat_category == value else "dark")
+		button.add_theme_font_size_override("font_size", 14)
+		category_row.add_child(button)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size.y = 132
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	battle_panel.add_child(scroll)
+	var list := _vbox(scroll, 8)
+	list.size_flags_horizontal = SIZE_EXPAND_FILL
+	if combat_category == "Inimigos":
+		var monsters: Array = JSON.parse_string(FileAccess.get_file_as_string("res://data/creatures.json"))
+		if not state.world.enemies.any(func(enemy): return str(enemy.id) == battle_target_id):
+			battle_target = state.world.enemies[0].name
+			battle_target_id = str(state.world.enemies[0].id)
+		for enemy in state.world.enemies:
+			var row := _hbox(list, 10)
+			for base in monsters:
+				if base.name == enemy.name: _illustration(row, base.image, Vector2(58, 58)); break
+			var info := _vbox(row, 4)
+			info.size_flags_horizontal = SIZE_EXPAND_FILL
+			var health_known: bool = state.knowledge(enemy.name).fields.has("health")
+			var health_text := "%d/%d" % [enemy.get("health", 0), enemy.get("maxHealth", enemy.get("health", 1))] if health_known else "desconhecida"
+			_paragraph(info, "%s • Vida %s" % [enemy.name, health_text], CREAM, 17)
+			var hp := ProgressBar.new()
+			hp.max_value = maxf(1, float(enemy.get("maxHealth", enemy.get("health", 1))))
+			hp.value = float(enemy.get("health", 0))
+			hp.show_percentage = false
+			hp.custom_minimum_size.y = 12
+			hp.visible = health_known
+			info.add_child(hp)
+			var name_: String = enemy.name
+			var enemy_id: String = enemy.id
+			row.add_child(_button("Alvo ✓" if battle_target_id == enemy_id else "Selecionar", func(): battle_target = name_; battle_target_id = enemy_id; _refresh_battle(), "orange" if battle_target_id == enemy_id else "dark"))
+		var actions := HFlowContainer.new()
+		actions.add_theme_constant_override("h_separation", 6)
+		list.add_child(actions)
+		for spec in [["Atacar", "Atacar " + battle_target, "attack"], ["Defender", "Defender", "defend"], ["Esquivar", "Esquivar do próximo ataque", "dodge"], ["Observar", "Observar " + battle_target, "observe"], ["Provocar", "Provocar " + battle_target, "taunt"], ["Esconder", "Tentar me esconder", "hide"], ["Fugir", "Tentar fugir", "flee"]]:
+			var action: String = spec[1]
+			var button := _button(spec[0], func(): _battle_use(action), "dark")
+			button.icon = load("res://assets/combat/%s.svg" % spec[2])
+			button.expand_icon = true
+			button.add_theme_constant_override("icon_max_width", 26)
+			button.add_theme_font_size_override("font_size", 15)
+			button.tooltip_text = action + ". Você também pode descrever uma ação própria no chat."
+			button.disabled = not _battle_can_act()
+			actions.add_child(button)
+		_paragraph(list, "Sugestões rápidas. Use o chat para uma ação própria; manobras compostas exigem um teste mais difícil e continuam sendo um único turno.", GOLD, 13)
+	elif combat_category == "Habilidades":
+		_paragraph(list, "Alvo: " + battle_target + " • Troque o alvo em Inimigos.", GOLD, 14)
+		var count := 0
+		for learned in state.world.skills:
+			var skill := _battle_skill(learned)
+			if state.skill_is_passive(skill): continue
+			count += 1
+			var cost := int(skill.get("cost", 0))
+			var pool := "mana" if str(skill.get("costType", "")).to_lower() == "mana" else "energy"
+			var action := "Usar %s em %s" % [skill.name, battle_target]
+			var cooldown := int(state.world.get("skillCooldowns", {}).get(skill.name, 0))
+			var details := {"pool": pool, "remaining": maxi(0, int(status[pool]) - cost), "skill": str(skill.name), "cooldown": int(skill.get("cooldown", 0))}
+			var button := _button("%s • %d %s • %s" % [skill.name, cost, "mana" if pool == "mana" else "energia", skill.get("damage", "Técnica")], func(): _battle_use(action, details), "dark")
+			button.tooltip_text = str(skill.get("description", ""))
+			button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			if cooldown > 0: button.text += " • Recarga: %d turno(s)" % cooldown
+			button.disabled = not _battle_can_act() or int(status[pool]) < cost or cooldown > 0
+			list.add_child(button)
+		if count == 0: _paragraph(list, "Nenhuma habilidade ativa aprendida. Desbloqueie técnicas na árvore.", CREAM, 16)
+	else:
+		var count := 0
+		var catalog: Array = JSON.parse_string(FileAccess.get_file_as_string("res://data/items.json"))
+		for owned in state.world.inventory:
+			for base in catalog:
+				if base.name != owned.name or base.type != "Consumível" or int(owned.get("quantity", 1)) < 1: continue
+				count += 1
+				var action := "Usar " + str(owned.name) + " em mim. " + str(base.description)
+				var details := {"item": str(owned.name)}
+				var button := _button("%s ×%d • %s" % [owned.name, owned.get("quantity", 1), base.description], func(): _battle_use(action, details), "dark")
+				button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				button.disabled = not _battle_can_act()
+				list.add_child(button)
+		if count == 0: _paragraph(list, "Nenhum consumível disponível no inventário.", CREAM, 16)
+	if dev_combat:
+		list.add_child(_button("Encerrar teste e voltar à aventura", _end_combat_lab, "red"))
+	if not actor.is_empty() and actor.type != "player" and not state.world.initiativePending:
+		_paragraph(list, "Turno automático de " + str(actor.name), GOLD, 15)
+
 const ITEM_COLORS = ["93989f", "4ec76a", "4495ee", "b46bee", "ffb02e", "ef4242", "fff0b0"]
+
+func _stat_text(value: Variant) -> String:
+	return str(int(value)) if value is float and is_equal_approx(value, roundf(value)) else str(value)
+
+func _turn_rules() -> String:
+	return "REGRA DE TURNO: cada ação é resolvida uma única vez. Se pedir dado, descreva APENAS a intenção/preparação, sem impacto, dano, acerto, recompensa nem consumo. Se pendingRoll/pendingTurn estiver presente, resolva aquela MESMA ação com o resultado fornecido, sem repetir o golpe ou solicitar outro dado. Ações compostas continuam sendo uma ação; não dê dois ataques. No turno inimigo, execute somente aquele inimigo.\nSEGREDO DO BESTIÁRIO: os números do catálogo são conhecimento privado do mestre. Não exponha vida total, defesa, mana, dano teórico ou fraquezas ainda desconhecidos em codexKnowledge. Pode narrar o dano efetivamente observado. Avistar só registra a espécie. Use bestiaryDiscoveries com nome, campos e evidência somente após observação concreta, estudo solicitado em local apropriado (source study) ou informação obtida em conversa (source informant); não revele a ficha inteira ao iniciar combate.\n"
+
+func _queue_player_action(action: String, details: Dictionary = {}) -> void:
+	if not _battle_can_act(): return
+	combat_action = details.duplicate(true)
+	combat_action.action = action
+	if details.has("item") or action == "Defender":
+		_request_turn(action)
+		return
+	var lower := action.to_lower()
+	var attribute := "strength"
+	if ["esquiv", "esconder", "fugir", "furtiv"].any(func(word): return word in lower): attribute = "dexterity"
+	elif ["observar", "examinar", "analisar"].any(func(word): return word in lower): attribute = "wisdom"
+	elif ["provocar", "negociar", "intimidar", "persuadir"].any(func(word): return word in lower): attribute = "charisma"
+	elif details.get("pool", "") == "mana": attribute = "intelligence"
+	var base := state.creature_base(battle_target)
+	var dc := int(base.get("armor", 10)) if lower.begins_with("atacar") else 12
+	var complex := action.length() > 110 or [" e depois ", " enquanto ", " ao mesmo tempo ", " e atacar", " e ataco", " e lançar"].any(func(word): return word in lower)
+	if complex: dc += 3
+	state.world.pendingTurn = {"action":action,"actorId":str(state.actor().get("id","player")),"targetId":battle_target_id,"complex":complex}
+	state.world.dice = true
+	state.world.diceTest = {"attribute":attribute,"difficulty":clampi(dc, 5, 25),"reason":action + (" • Manobra composta: +3 à dificuldade; uma única ação." if complex else "")}
+	combat_action.awaitingRoll = true
+	state.world.pendingCombatAction = combat_action.duplicate(true)
+	state.world.history.append({"role":"user","text":action})
+	state.world.history.append({"role":"model","text":"Prepare a ação e role o D20. " + str(state.world.diceTest.reason) + " O resultado será aplicado após o teste.","localChallenge":true})
+	input.text = ""
+	_refresh_game()
+	_autosave()
+
+func _animate_die(result: Dictionary) -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 60
+	add_child(layer)
+	var cinematic := preload("res://scripts/dice_cinematic.gd").new()
+	cinematic.result = result.duplicate(true)
+	layer.add_child(cinematic)
+	await cinematic.finished
+	layer.queue_free()
+
+func _initiative_animation() -> void:
+	if client.busy or rolling or not state.world.initiativePending: return
+	state.roll_initiative()
+	_play_sfx("dice/dice-95077.mp3")
+	rolling = true
+	_autosave()
+	if not test_mode:
+		for actor in state.world.turnOrder:
+			if actor.type == "player":
+				var bonus := int(state.world.status.dexterity)
+				await _animate_die({"roll":int(actor.initiative)-bonus,"bonus":bonus,"total":int(actor.initiative),"initiative":true})
+	rolling = false
+	_refresh_game()
+
+func _schedule_enemy() -> void:
+	if test_mode and not allow_test_automation: return
+	if enemy_scheduled or client.busy or rolling or is_instance_valid(tutorial_layer) or not failed_action.is_empty() or mode != "player": return
+	if state.world.is_empty() or state.world.dice or state.world.initiativePending or int(state.world.status.health) <= 0: return
+	var actor: Dictionary = state.actor()
+	if actor.is_empty() or actor.type == "player": return
+	enemy_scheduled = true
+	var id := str(actor.id)
+	var world_id := str(state.world.id)
+	await get_tree().create_timer(.85).timeout
+	enemy_scheduled = false
+	if screen != "inGame" or state.world.get("id", "") != world_id or str(state.actor().get("id", "")) != id: return
+	if not client.busy and not rolling and failed_action.is_empty() and not is_instance_valid(tutorial_layer): _resolve_actor()
+
+func _maybe_tutorial() -> void:
+	if test_mode or int(prefs.tutorialVersion) >= 1 or dev_combat: return
+	if screen != "inGame" or client.busy or rolling or is_instance_valid(overlay) or is_instance_valid(tutorial_layer) or state.world.history.is_empty(): return
+	_start_tutorial()
+
+func _start_tutorial() -> void:
+	if screen != "inGame" or client.busy or rolling or is_instance_valid(tutorial_layer): return
+	_close_modal()
+	tutorial_layer = CanvasLayer.new()
+	tutorial_layer.layer = 70
+	add_child(tutorial_layer)
+	var tutorial := preload("res://scripts/spotlight_tutorial.gd").new()
+	tutorial.steps = [
+		{"target":func(): return story, "text":"Aqui acontece a aventura. Leia a narração e as consequências das suas escolhas. O mestre aguarda o dado antes de resolver uma ação incerta."},
+		{"target":func(): return input, "text":"Descreva sua ação com suas palavras. Em combate você tem uma ação por turno; uma manobra composta pode exigir um teste mais difícil."},
+		{"target":func(): return send_button, "text":"Enviar vira D20 quando há um teste. Clique para ver o dado animado: o jogo soma seu atributo e envia o resultado automaticamente. Tentar novamente não sorteia outro dado."},
+		{"target":func(): return navigation_panel if navigation_panel.is_visible_in_tree() else compact_bar.get_child(0), "text":"Consulte personagem, habilidades, inventário e bestiário. Os avisos vermelhos indicam mudanças reais. Dados dos monstros só aparecem conforme você os descobre."},
+		{"target":func(): return battle_panel if battle_panel.is_visible_in_tree() else (action_panel if action_panel.is_visible_in_tree() else compact_bar.get_child(2)), "text":"O combate abre automaticamente. Escolha um alvo, use sugestões, habilidades ou consumíveis. O inimigo responde no próprio turno sem precisar de confirmação."}
+	]
+	tutorial.finished.connect(func():
+		prefs.tutorialVersion = 1
+		_save_prefs()
+		tutorial_layer.queue_free()
+		tutorial_layer = null
+		_schedule_enemy())
+	tutorial_layer.add_child(tutorial)
+
+func _combat_lab() -> void:
+	var box := _modal("Dev • Laboratório de combate")
+	_paragraph(box, "Teste em uma cópia isolada. Seu personagem, inventário, descobertas e progresso originais serão restaurados ao sair. O teste local funciona sem chave e sem consumir cota.", BROWN, 16)
+	var monsters: Array = JSON.parse_string(FileAccess.get_file_as_string("res://data/creatures.json"))
+	var choose := OptionButton.new()
+	for monster in monsters: choose.add_item(monster.name)
+	box.add_child(choose)
+	var count := SpinBox.new()
+	count.min_value = 1; count.max_value = 3; count.value = 1
+	box.add_child(_label("Quantidade de inimigos", 17, BROWN))
+	box.add_child(count)
+	var online := CheckButton.new()
+	online.text = "Testar com a IA configurada (usa sua cota)"
+	box.add_child(online)
+	var start := _button("Iniciar combate de teste", func(): _begin_combat_lab(monsters[choose.selected], int(count.value), not online.button_pressed), "green")
+	start.disabled = client.busy or rolling
+	box.add_child(start)
+	if dev_combat: box.add_child(_button("Encerrar teste e restaurar aventura", _end_combat_lab, "red"))
+
+func _begin_combat_lab(monster: Dictionary, count: int, offline: bool = true) -> void:
+	if client.busy or rolling: return
+	if not dev_combat:
+		dev_snapshot = {"world":state.world.duplicate(true),"character":character.duplicate(true),"mode":mode,"genre":genre,"setting":setting,"screen":screen,"failed":failed_action,"failedOpening":failed_opening,"failedControl":failed_control,"combatAction":combat_action.duplicate(true)}
+	dev_combat = true
+	dev_offline = offline
+	mode = "player"; genre = "Isekai"; setting = "Medieval"
+	character = state.profile()
+	character.characterName = "Aventureiro de teste"
+	state.begin(character,genre,setting,mode)
+	state.world.location = "Arena de treinamento Dev"
+	state.world.status.health = 80; state.world.status.maxHealth = 80
+	state.world.status.mana = 50; state.world.status.maxMana = 50
+	state.world.status.energy = 50; state.world.status.maxEnergy = 50
+	state.world.status.level = 5
+	state.world.inventory = [{"name":"Poção de Vida","type":"Consumível","quantity":3},{"name":"Poção de Mana","type":"Consumível","quantity":3}]
+	for skill in state.skill_tree():
+		if skill.treeId in ["combat_1","arcane_1"]:
+			var learned: Dictionary = skill.duplicate(true); learned.level = 1
+			state.world.skills.append(learned)
+	for i in count:
+		state.world.enemies.append({"id":"dev-"+str(i),"name":monster.name,"health":int(monster.health),"maxHealth":int(monster.health)})
+		state.discover(monster.name)
+	state.world.initiativePending = true
+	state.world.history = [{"role":"model","text":"SIMULAÇÃO DEV — %s\nRole a iniciativa no D20. Teste ações, dados, habilidades, itens e descobertas. Nada será salvo na aventura original." % ("mestre local, sem API" if offline else "IA configurada, com uso de cota")}]
+	pending = ""; failed_action = ""; combat_action = {}; battle_active = false
+	show_screen("inGame")
+
+func _end_combat_lab() -> void:
+	if not dev_combat: return
+	request_generation += 1
+	client.cancel()
+	state.world = dev_snapshot.world.duplicate(true)
+	character = dev_snapshot.character.duplicate(true)
+	mode = dev_snapshot.mode; genre = dev_snapshot.genre; setting = dev_snapshot.setting
+	failed_action = dev_snapshot.failed; failed_opening = dev_snapshot.failedOpening; failed_control = dev_snapshot.failedControl
+	combat_action = dev_snapshot.combatAction.duplicate(true)
+	pending = ""; operation = ""; dev_combat = false; battle_active = false
+	var previous_screen: String = dev_snapshot.screen
+	dev_snapshot = {}
+	show_screen(previous_screen)
+	_status("Teste encerrado. Sua aventura original foi restaurada.")
+
+func _local_combat_reply(ticket: int) -> void:
+	await get_tree().create_timer(.25).timeout
+	if ticket != request_generation or not dev_combat or not dev_offline or not client.busy: return
+	var enemies: Array = state.world.enemies.duplicate(true)
+	var status: Dictionary = state.world.status.duplicate(true)
+	var actor: Dictionary = state.actor()
+	var action := str(state.world.get("pendingTurn", {}).get("action", pending))
+	var success: bool = state.world.get("pendingRoll", {}).get("success",true)
+	var story_text := ""
+	if actor.get("type", "player") != "player":
+		var base := state.creature_base(str(actor.get("name","Slime")))
+		var hit := randi_range(1,20) + int(base.get("level",1)) >= 10 + int(status.dexterity)
+		var damage := randi_range(int(base.get("damageMin",1)),int(base.get("damageMax",4))) if hit else 0
+		if state.world.get("devDefending",false): damage = int(damage/2.0)
+		state.world.erase("devDefending")
+		status.health = maxi(0,int(status.health)-damage)
+		story_text = "%s ataca e causa %d de dano. Agora você pode agir." % [actor.get("name","O inimigo"),damage] if hit else "%s tenta atacar, mas erra. Sua próxima ação está livre." % actor.get("name","O inimigo")
+	elif combat_action.has("item"):
+		var pool := "health" if combat_action.item == "Poção de Vida" else "mana"
+		var maximum := "maxHealth" if pool == "health" else "maxMana"
+		status[pool] = mini(int(status[maximum]),int(status[pool]) + (25 if pool == "health" else 20))
+		story_text = "Você usa %s. O recurso foi restaurado e uma unidade será consumida." % combat_action.item
+	elif action == "Defender" or "Esquivar" in action:
+		state.world.devDefending = success
+		story_text = "Você se prepara para reduzir o dano do próximo ataque." if success else "Você tenta se esquivar, mas não encontra uma posição segura."
+	elif "fugir" in action:
+		if success: enemies.clear()
+		story_text = "Você escapa e encerra o combate de teste." if success else "A saída é bloqueada. A tentativa consome seu turno."
+	elif "Observar" in action or "Provocar" in action or "esconder" in action:
+		story_text = "Você conclui sua manobra com sucesso." if success else "A manobra falha. O adversário mantém a vantagem."
+		if "Observar" in action and success:
+			state.discover(battle_target,["type","ability","magicAptitude"],"Observação bem-sucedida na arena de teste.")
+	else:
+		var target_index := 0
+		for i in enemies.size():
+			if str(enemies[i].id) == str(state.world.get("pendingTurn",{}).get("targetId",battle_target_id)): target_index = i; break
+		var damage := randi_range(1,6) + int(status.strength) if success else 0
+		if not enemies.is_empty():
+			var name_: String = enemies[target_index].name
+			enemies[target_index].health = maxi(0,int(enemies[target_index].health)-damage)
+			story_text = "Você executa a ação e causa %d de dano em %s. Este é o único impacto do turno." % [damage,name_] if success else "A tentativa falha e não causa dano. O turno passa ao adversário."
+			enemies = enemies.filter(func(enemy): return int(enemy.health)>0)
+	client.busy = false
+	_reply(JSON.stringify({"storyText":story_text,"location":state.world.location,"playerStatus":status,"enemies":enemies,"diceRollChallenge":false}))
 
 func _item_card(parent: Node, item: Dictionary, preview_rarity: String = "") -> void:
 	var data := item.duplicate(true)
@@ -1789,4 +2468,3 @@ func _learned_skills(box: Node) -> void:
 			card.add_child(prepare)
 	if active_count == 0: _paragraph(active, "Nenhuma habilidade ativa aprendida. Consulte a árvore para desbloquear técnicas.")
 	if passive_count == 0: _paragraph(passive, "Nenhuma passiva aprendida.")
-

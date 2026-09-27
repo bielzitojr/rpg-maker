@@ -179,7 +179,7 @@
     },
     "bestiary": {
       "type": "ARRAY",
-      "description": "Lista de criaturas para ADICIONAR ou ATUALIZAR no bestiário. Retorne a ficha completa com todas as informações conhecidas até agora.",
+      "description": "Registre somente nome e observações visíveis. Nunca revele atributos exatos por mero avistamento. Descobertas fundamentadas usam bestiaryDiscoveries.",
       "items": {
         "type": "OBJECT",
         "properties": {
@@ -415,6 +415,65 @@
         "attribute",
         "difficulty",
         "reason"
+      ]
+    },
+    "bestiaryDiscoveries": {
+      "type": "ARRAY",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "name": {
+            "type": "STRING"
+          },
+          "fields": {
+            "type": "ARRAY",
+            "items": {
+              "type": "STRING"
+            }
+          },
+          "source": {
+            "type": "STRING",
+            "enum": [
+              "observation",
+              "study",
+              "informant"
+            ]
+          },
+          "evidence": {
+            "type": "STRING"
+          }
+        },
+        "required": [
+          "name",
+          "fields",
+          "source",
+          "evidence"
+        ]
+      }
+    },
+    "enemyAction": {
+      "type": "OBJECT",
+      "description": "Ação do inimigo atual. Declare ability somente quando realmente usar uma técnica do catálogo.",
+      "properties": {
+        "actorId": {
+          "type": "STRING"
+        },
+        "kind": {
+          "type": "STRING",
+          "enum": [
+            "attack",
+            "ability",
+            "defend",
+            "move"
+          ]
+        },
+        "ability": {
+          "type": "STRING"
+        }
+      },
+      "required": [
+        "actorId",
+        "kind"
       ]
     }
   },

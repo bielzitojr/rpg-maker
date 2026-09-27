@@ -61,10 +61,15 @@ func normalize_response(raw: Variant) -> Dictionary:
 		if test.get("attribute") in ATTRIBUTES and (test.get("difficulty") is int or test.get("difficulty") is float):
 			clean.diceTest = {"attribute": test.attribute, "difficulty": clampi(int(test.difficulty), 1, 40), "reason": str(test.get("reason", "Teste de atributo"))}
 	if raw.get("unlockedAchievementId") is String: clean.unlockedAchievementId = raw.unlockedAchievementId
+	if raw.get("bestiaryDiscoveries") is Array: clean.bestiaryDiscoveries = raw.bestiaryDiscoveries.filter(func(entry): return entry is Dictionary).duplicate(true)
+	if raw.get("enemyAction") is Dictionary: clean.enemyAction = raw.enemyAction.duplicate(true)
 	return clean
 
 func commit(action: String, update: Dictionary, opening: bool = false) -> void:
-	world.history.append({"role": "user", "text": action, "hidden": opening})
+	if not world.history.is_empty() and world.history.back().get("localRoll", false) and world.history.back().text == action:
+		world.history.back().erase("localRoll")
+	else:
+		world.history.append({"role": "user", "text": action, "hidden": opening})
 	var story: String = update.storyText
 	if update.get("npcDialogue") is Dictionary:
 		story += "\n\n%s: %s" % [update.npcDialogue.get("character", ""), update.npcDialogue.get("line", "")]
@@ -80,6 +85,7 @@ func apply_update(update: Dictionary) -> void:
 			var value: Variant = update.gameTime.get(key)
 			if value is float or value is int: world.gameTime[key] = maxi(0, int(value))
 	if update.has("playerStatus"):
+		var old_status: Dictionary = world.status.duplicate(true)
 		var previous_level := int(world.status.level)
 		var previous_points := int(world.status.skillPoints)
 		for key in world.status:
@@ -95,7 +101,11 @@ func apply_update(update: Dictionary) -> void:
 		if world.genre == "Isekai": world.status.skillPoints = previous_points + 2 * maxi(0, int(world.status.level) - previous_level)
 		if world.status.level > previous_level:
 			log_event("Subiu ao nível %d!" % world.status.level)
-		notify("Status")
+		var changed := false
+		for key in world.status:
+			if key in ["sanity", "maxSanity"] and world.genre != "Terror": continue
+			if key != "description" and old_status.get(key) != world.status[key]: changed = true
+		if changed: notify("Status")
 	for item in update.get("inventory", []):
 		var amount := maxi(1, int(item.get("quantity", 1))) if item.get("quantity", 1) is float or item.get("quantity", 1) is int else 1
 		var index := -1
@@ -278,6 +288,7 @@ func skill_tree() -> Array:
 			var bonus := 2 + int(node.tier)
 			var effect := "%s +%d" % ["acerto físico (%)" if node.branch == "Combate" else ("concentração" if node.branch == "Arcano" else "resistência ambiental (%)"), bonus]
 			nodes.append({"treeId": str(node.treeId) + ("_focus" if side < 0 else "_discipline"), "name": suffix + " · " + str(node.name), "description": "Especialização passiva: " + effect + ". Aplica-se apenas aos testes ou efeitos correspondentes. Não causa dano direto.", "summary": effect, "requires": node.treeId, "requiredLevel": node.requiredLevel, "branch": node.branch, "tier": node.tier, "satellite": side, "cost": 0, "costType": "Passiva", "damage": "0", "cooldown": 0, "range": 0, "maxLevel": 1, "level": 1})
+	nodes.append_array(JSON.parse_string(FileAccess.get_file_as_string("res://data/specializations.json")))
 	return nodes
 
 func tree_rank(node: Dictionary) -> int:
@@ -324,3 +335,161 @@ func skill_is_passive(skill: Dictionary) -> bool:
 	var id := str(skill.get("treeId", ""))
 	if id in ["combat_0", "combat_2", "arcane_2", "survival_0", "survival_2"] or id.ends_with("_focus") or id.ends_with("_discipline"): return true
 	return "passiv" in str(skill.get("category", "")).to_lower() or str(skill.get("costType", "")).to_lower() == "passiva"
+
+func master_catalog() -> Dictionary:
+	var result := {"creatures": [], "items": [], "skills": [], "races": catalog.RACES + catalog.MONSTER_RACES, "classes": catalog.CLASSES}
+	var skill_names: Array = []
+	for race in catalog.skills.values():
+		for skills in race.values():
+			for skill in skills:
+				if skill.name not in skill_names:
+					skill_names.append(skill.name)
+					result.skills.append(skill.duplicate(true))
+	if not world.is_empty() and world.genre == "Isekai": result.skills.append_array(skill_tree())
+	for pair in [["creatures", "res://data/creatures.json"], ["items", "res://data/items.json"]]:
+		var data: Array = JSON.parse_string(FileAccess.get_file_as_string(pair[1]))
+		for entry in data:
+			var clean: Dictionary = entry.duplicate(true)
+			clean.erase("image")
+			result[pair[0]].append(clean)
+	for weapons_ in catalog.WEAPONS_BY_CLASS.values():
+		for weapon in weapons_:
+			if not result.items.any(func(item): return item.name == weapon.name): result.items.append(weapon.duplicate(true))
+	if not result.items.any(func(item): return item.name == catalog.NATURAL_WEAPON.name): result.items.append(catalog.NATURAL_WEAPON.duplicate(true))
+	return result
+
+func catalog_error(update: Dictionary) -> String:
+	if world.has("pendingRoll") and update.get("diceRollChallenge", false): return "O dado já foi rolado. Resolva somente a ação pendente com esse resultado, sem pedir uma segunda rolagem."
+	if update.get("diceRollChallenge", false) and (not update.has("diceTest") or not update.diceTest.get("attribute", "") in ATTRIBUTES):
+		return "O teste solicitado precisa de atributo, dificuldade e motivo válidos."
+	var data := master_catalog()
+	for pair in [["enemies", "creatures"], ["bestiary", "creatures"], ["inventory", "items"], ["skills", "skills"]]:
+		for entry in update.get(pair[0], []):
+			var name_: String = entry.name
+			var found := false
+			for base in data[pair[1]]:
+				if base.name == name_: found = true; break
+			# Existing saves may contain legacy entities; never create new unknown entities.
+			for existing in world.get(pair[0], []):
+				if existing.name == name_: found = true; break
+			if not found: return "Elemento fora do catálogo: " + name_ + "."
+	return ""
+
+func canonicalize_update(update: Dictionary) -> void:
+	var data := master_catalog()
+	for pair in [["enemies", "creatures"], ["inventory", "items"]]:
+		for item in update.get(pair[0], []):
+			for base in data[pair[1]]:
+				if base.name != item.name: continue
+				if pair[0] == "enemies":
+					item.maxHealth = int(base.health)
+					for key in ["type", "level", "damage", "damageType", "armor", "magicAptitude", "ability", "weakness", "image"]:
+						if base.has(key): item[key] = base[key]
+				else:
+					for key in ["type", "description", "damage", "image", "value"]:
+						if base.has(key): item[key] = base[key]
+				break
+
+func compact_master_catalog() -> Dictionary:
+	var data := master_catalog()
+	var result := {}
+	for spec in [["creatures", ["name", "type", "health", "armor", "damage", "damageType", "magicAptitude", "ability", "weakness", "habitat"]], ["items", ["name", "type", "damage", "description"]]]:
+		var rows: Array = []
+		for entry in data[spec[0]]:
+			var row: Array = []
+			for key in spec[1]: row.append(entry.get(key, ""))
+			rows.append(row)
+		result[spec[0]] = {"columns": spec[1], "rows": rows}
+	result.skills = data.skills.map(func(skill): return skill.name)
+	result.races = data.races
+	result.classes = data.classes
+	return result
+
+func creature_base(name_: String) -> Dictionary:
+	var creatures: Array = JSON.parse_string(FileAccess.get_file_as_string("res://data/creatures.json"))
+	for creature in creatures:
+		if creature.name == name_: return creature
+	return {}
+
+func knowledge(name_: String) -> Dictionary:
+	return world.get("codexKnowledge", {}).get(name_, {"fields": {}, "evidence": [], "hits": 0, "attacks": 0, "damageObserved": [], "defeats": 0})
+
+func discover(name_: String, fields: Array = [], note: String = "Avistamento") -> void:
+	var base := creature_base(name_)
+	if base.is_empty(): return
+	if not world.has("codexKnowledge"): world.codexKnowledge = {}
+	var record: Dictionary = knowledge(name_).duplicate(true)
+	var changed: bool = not world.codexKnowledge.has(name_)
+	for field in fields:
+		if base.has(field) and not record.fields.has(field): record.fields[field] = true; changed = true
+	if changed:
+		record.evidence.append(note)
+		notify("Bestiário")
+	world.codexKnowledge[name_] = record
+	if not world.bestiary.any(func(entry): return entry.name == name_): world.bestiary.append({"name":name_})
+
+func known_creature(name_: String) -> Dictionary:
+	var base := creature_base(name_)
+	var data := {"name": name_, "image": base.get("image", ""), "description": "Observe, enfrente ou pesquise esta espécie para descobrir suas características."}
+	var record := knowledge(name_)
+	for field in record.fields:
+		if base.has(field): data[field] = base[field]
+	data.evidence = record.evidence
+	data.damageObserved = record.damageObserved
+	return data
+
+func observe_turn(before: Dictionary, update: Dictionary, actor_id: String, action: String) -> void:
+	for enemy in world.enemies: discover(enemy.name)
+	for entry in update.get("bestiary", []): discover(entry.name)
+	var actor_: Dictionary = {}
+	for candidate in before.get("turnOrder", []):
+		if candidate.id == actor_id: actor_ = candidate
+	for old in before.get("enemies", []):
+		var remaining := 0
+		for enemy in world.enemies:
+			if enemy.id == old.id: remaining = int(enemy.health)
+		if remaining < int(old.health):
+			discover(old.name)
+			var record: Dictionary = knowledge(old.name).duplicate(true)
+			record.hits += 1
+			world.codexKnowledge[old.name] = record
+			if int(record.hits) >= 3: discover(old.name, ["armor"], "Defesa estimada após três impactos observados.")
+		if remaining == 0 and int(old.health) > 0:
+			discover(old.name, ["health", "level", "type"], "Vitalidade confirmada após observar a derrota da criatura.")
+			world.codexKnowledge[old.name].defeats += 1
+	if actor_.get("type", "") == "enemy":
+		var action_info: Dictionary = update.get("enemyAction", {})
+		var base := creature_base(actor_.name)
+		if action_info.get("actorId", "") == actor_id and action_info.get("kind", "") == "ability" and str(action_info.get("ability", "")) == str(base.get("ability", "")) and str(base.get("magicAptitude", "Nenhuma")).to_lower() != "nenhuma":
+			discover(actor_.name, ["ability", "magicAptitude", "attackRange"], "Técnica mágica observada em combate.")
+			var record: Dictionary = knowledge(actor_.name).duplicate(true)
+			record.casts = int(record.get("casts", 0)) + 1
+			world.codexKnowledge[actor_.name] = record
+			if int(record.casts) >= 2: discover(actor_.name, ["attackCost", "cooldown"], "Custo e intervalo identificados após duas conjurações.")
+			if int(record.casts) >= 3: discover(actor_.name, ["mana"], "Reserva de mana identificada após acompanhar três conjurações.")
+		var damage := maxi(0, int(before.status.health) - int(world.status.health))
+		if damage > 0:
+			discover(actor_.name, ["damageType"], "Tipo de ferimento observado durante o ataque.")
+			var record: Dictionary = knowledge(actor_.name).duplicate(true)
+			record.damageObserved.append(damage)
+			world.codexKnowledge[actor_.name] = record
+			if record.damageObserved.size() >= 3: discover(actor_.name, ["damage", "damageMin", "damageMax"], "Padrão de dano identificado após três ataques sofridos.")
+	for entry in update.get("bestiaryDiscoveries", []):
+		if not entry.get("name") is String or not entry.get("fields") is Array: continue
+		var source := str(entry.get("source", ""))
+		var evidence := str(entry.get("evidence", "")).strip_edges()
+		if evidence.is_empty(): continue
+		var requested := action.to_lower()
+		var place := (str(before.get("location", "")) + " " + str(world.location)).to_lower()
+		var study := source == "study" and ["biblioteca", "academia", "arquivo", "guilda", "universidade", "escola", "templo"].any(func(word): return word in place) and ["estud", "pesquis", "ler ", "leio", "consult"].any(func(word): return word in requested)
+		var narration := str(update.get("storyText", "")).to_lower()
+		var informant := source == "informant" and (["pergunt", "convers", "inform", "ouvir", "ouço", "ensine", "consult"].any(func(word): return word in requested) or ["explica", "informa", "ensina", "revela", "diz:"].any(func(word): return word in narration))
+		if study or informant: discover(entry.name, entry.fields, ("Pesquisa: " if study else "Informação recebida: ") + evidence)
+		elif source == "observation":
+			var allowed: Array = []
+			var narrative := str(update.get("storyText", "")).to_lower()
+			var base := creature_base(entry.name)
+			if "observar" in requested or "analisar" in requested or "examinar" in requested:
+				for field in entry.fields:
+					if field in ["ability", "weakness", "magicAptitude", "mana", "attackCost", "cooldown", "attackRange"] and base.has(field) and str(base[field]).to_lower() in narrative: allowed.append(field)
+			if not allowed.is_empty(): discover(entry.name, allowed, "Observação: " + evidence)
