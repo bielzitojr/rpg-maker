@@ -1,4 +1,4 @@
-name: Build Windows
+name: Build Windows and Web
 on:
   push:
     branches: [main]
@@ -6,6 +6,8 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+  pages: write
+  id-token: write
 concurrency:
   group: windows-release
   cancel-in-progress: false
@@ -25,7 +27,7 @@ jobs:
           sudo mv /tmp/godot/Godot* /usr/local/bin/godot
           curl -fL --retry 3 -o /tmp/templates.tpz https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz
           mkdir -p ~/.local/share/godot/export_templates/4.7.2.stable
-          unzip -j /tmp/templates.tpz 'templates/windows_release_x86_64.exe' 'templates/windows_debug_x86_64.exe' -d ~/.local/share/godot/export_templates/4.7.2.stable
+          unzip -j /tmp/templates.tpz 'templates/windows_release_x86_64.exe' 'templates/windows_debug_x86_64.exe' 'templates/web*.zip' -d ~/.local/share/godot/export_templates/4.7.2.stable
       - name: Import and test
         run: |
           godot --headless --path godot --editor --quit
@@ -37,6 +39,17 @@ jobs:
           godot --headless --path godot --export-release Windows ../exports/RPGMaker.exe
           cd exports
           zip -9 RPGMaker-Windows.zip RPGMaker.exe
+      - name: Export browser version
+        run: |
+          mkdir -p web
+          godot --headless --path godot --export-release Web ../web/index.html
+          test -s web/index.html
+          test -s web/index.wasm
+          test -s web/index.pck
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
       - uses: actions/upload-artifact@v4
         with:
           name: RPGMaker-Windows
@@ -46,3 +59,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "build-${GITHUB_RUN_NUMBER}" exports/RPGMaker-Windows.zip --target "$GITHUB_SHA" --title "RPG Maker · build ${GITHUB_RUN_NUMBER}" --notes "Build automático para Windows. Extraia o ZIP e execute RPGMaker.exe. Cada jogador configura sua própria chave de IA nas configurações." --latest
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish online game
+        id: deployment
+        uses: actions/deploy-pages@v4
